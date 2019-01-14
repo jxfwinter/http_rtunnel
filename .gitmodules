@@ -1,0 +1,3 @@
+[submodule "server/server_kit"]
+	path = server/server_kit
+	url = https://gitlab.com/jxfwinter/server_kit.git
