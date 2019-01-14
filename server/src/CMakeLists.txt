@@ -9,7 +9,7 @@ set(OUTDIR ${CMAKE_CURRENT_SOURCE_DIR}/../../bin)
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
 
-set(Boost_LIBRARIES boost_log boost_fiber boost_context boost_log_setup boost_thread boost_filesystem boost_program_options boost_regex boost_date_time)
+set(Boost_LIBRARIES boost_log boost_fiber boost_context boost_log_setup boost_thread boost_system boost_filesystem boost_program_options boost_regex boost_date_time)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../server_kit/include)
 
