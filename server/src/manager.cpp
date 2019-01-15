@@ -49,6 +49,10 @@ void Manager::process_http_req(RequestContext& cxt)
             cxt.res.result(http::status::bad_request);
             return;
         }
+        //将请求转变为短连接
+        bool old_keep_alive = cxt.req.keep_alive();
+        cxt.req.keep_alive(false);
+
         string req_buffer = req_to_buffer(cxt.req);
         if(req_buffer.empty())
         {
@@ -64,6 +68,8 @@ void Manager::process_http_req(RequestContext& cxt)
         }
         string res_buffer = session->send_call(std::move(req_buffer));
         cxt.res = buffer_to_res(res_buffer);
+        //将响应keep_alive恢复
+        cxt.res.keep_alive(old_keep_alive);
     }
     catch(std::exception& e)
     {
