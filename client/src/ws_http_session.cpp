@@ -330,6 +330,7 @@ void WSHttpSession::loop_send(boost::system::error_code ec)
                 });
             }
 
+            m_send_queue.pop_front();
             if(ec)
             {
                 KK_PRT("error:%d,%s", ec.value(), ec.message().c_str());
@@ -343,7 +344,6 @@ void WSHttpSession::loop_send(boost::system::error_code ec)
                 }
                 yield break;
             }
-            m_send_queue.pop_front();
         }
     }
 }
