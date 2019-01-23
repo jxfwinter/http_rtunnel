@@ -1,8 +1,8 @@
 #ifndef WS_HTTP_SESSION_H
 #define WS_HTTP_SESSION_H
 
-#define TID "TID-J"
 #define SETUP_MARK "SET-JRPROXY"
+#define TID "TID-J"
 
 #include <string>
 #include <memory>

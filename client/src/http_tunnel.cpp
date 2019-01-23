@@ -1,4 +1,4 @@
-#include "ws_http_session.h"
+#include "http_tunnel.h"
 #include <ctime>
 #include <chrono>
 #include <boost/asio/read.hpp>
@@ -14,7 +14,7 @@
     printf("\n");\
     }while(0)
 
-static void set_socket_opt(const TcpSocket& socket)
+static void set_socket_opt(TcpSocket& socket)
 {
     //boost::asio::socket_base::keep_alive opt_keep_alive(true);
     //socket.set_option(opt_keep_alive);

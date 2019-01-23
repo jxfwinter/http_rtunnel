@@ -7,7 +7,6 @@ int main(int argc,char ** argv)
 {
     try
     {
-
         FiberFrameContext& frame_cxt = FiberFrameContext::instance();
         frame_cxt.run_thread_count = 3;
         frame_cxt.init();

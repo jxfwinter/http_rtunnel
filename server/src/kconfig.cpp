@@ -46,8 +46,8 @@ bool ConfigParams::init(int argc, char **argv)
         config_file_options.add_options()
                 ("http_listen_addr", po::value<string>(), "http listen address")
                 ("http_listen_port", po::value<uint16_t>(), "http listen port")
-                ("ws_listen_addr", po::value<string>(), "websocket listen address")
-                ("ws_listen_port", po::value<uint16_t>(), "websocket listen port")
+                ("tunnel_listen_port", po::value<string>(), "tunnel listen address")
+                ("tunnel_listen_port", po::value<uint16_t>(), "tunnel listen port")
                 ("req_timeout_secs", po::value<uint16_t>(), "request timeout seconds")
                 ("listen_urls", po::value<vector<string>>(), "http and ws listen urls")
                 ("log_path", po::value<string>(), "log file path")
@@ -78,8 +78,8 @@ bool ConfigParams::init(int argc, char **argv)
         http_listen_addr = vm["http_listen_addr"].as<string>();
         http_listen_port = vm["http_listen_addr"].as<uint16_t>();
 
-        ws_listen_addr = vm["ws_listen_addr"].as<string>();
-        ws_listen_port = vm["ws_listen_port"].as<uint16_t>();
+        tunnel_listen_addr = vm["tunnel_listen_addr"].as<string>();
+        tunnel_listen_port = vm["tunnel_listen_port"].as<uint16_t>();
 
         req_timeout_secs = vm["req_timeout_secs"].as<uint16_t>();
 

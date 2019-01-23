@@ -1,8 +1,6 @@
 #include "http_tunnel.h"
 #include "manager.h"
 
-#define TID "TID-J"
-
 HttpTunnel::HttpTunnel(TcpSocket &s) :
     m_socket(std::move(s))
 {
@@ -81,7 +79,7 @@ StrResponse HttpTunnel::request(StrRequest& req)
     }
 
     //等待响应的超时时间
-    boost::fibers::future_status fs = future.wait_for(std::chrono::seconds(m_timeout_seconds));
+    boost::fibers::future_status fs = future.wait_for(std::chrono::seconds(ConfigParams::instance().req_timeout_secs));
     if (fs == boost::fibers::future_status::timeout)
     {
         {

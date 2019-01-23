@@ -1,7 +1,38 @@
 #include "manager.h"
 #include "http_tunnel.h"
 
-#define SETUP_MARK "SET-JRPROXY"
+static void set_socket_opt(TcpSocket& socket)
+{
+    //boost::asio::socket_base::keep_alive opt_keep_alive(true);
+    //socket.set_option(opt_keep_alive);
+
+    int flags = 1;
+    int tcp_keepalive_time = 20;
+    int tcp_keepalive_probes = 3;
+    int tcp_keepalive_intvl = 3;
+
+    int ret = 0;
+    ret = setsockopt(socket.native_handle(), SOL_SOCKET, SO_KEEPALIVE, &flags, sizeof(flags));
+    if(ret < 0)
+    {
+        KK_PRT("setsockopt SO_KEEPALIVE failed");
+    }
+    ret = setsockopt(socket.native_handle(), IPPROTO_TCP, TCP_KEEPIDLE, &tcp_keepalive_time, sizeof(tcp_keepalive_time));
+    if(ret < 0)
+    {
+        KK_PRT("setsockopt TCP_KEEPIDLE failed");
+    }
+    ret = setsockopt(socket.native_handle(), IPPROTO_TCP, TCP_KEEPINTVL, &tcp_keepalive_intvl, sizeof(tcp_keepalive_intvl));
+    if(ret < 0)
+    {
+        KK_PRT("setsockopt TCP_KEEPINTVL failed");
+    }
+    ret = setsockopt(socket.native_handle(), IPPROTO_TCP, TCP_KEEPCNT, &tcp_keepalive_probes, sizeof(tcp_keepalive_probes));
+    if(ret < 0)
+    {
+        KK_PRT("setsockopt TCP_KEEPCNT failed");
+    }
+}
 
 Manager::Manager() :
     m_http_server(ConfigParams::instance().http_thread_pool, ConfigParams::instance().http_listen_addr, ConfigParams::instance().http_listen_port),
@@ -249,7 +280,16 @@ void Manager::accept()
                                 socket.shutdown(tcp::socket::shutdown_both, ec);
                                 return;
                             }
+                            socket.shutdown(tcp::socket::shutdown_both, ec);
                         };
+
+                        //难证是否为代理请求
+                        auto setup_it = req.find(SETUP_MARK);
+                        if(setup_it == req.end())
+                        {
+                            LogError << "not setup request";
+                            return send_bad_request("not setup request");
+                        }
 
                         string query_string;
                         string path;
@@ -258,13 +298,14 @@ void Manager::accept()
                             LogError << "parse target error," << req.target();
                             return send_bad_request("parse target error");
                         }
-                        //不验证url合法性
-//                        auto it_url = m_url_token_session.find(path);
-//                        if(it_url == m_url_token_session.end())
-//                        {
-//                            LogError << "add_session,not find url:" << path;
-//                            return send_bad_request("parse target error");
-//                        }
+                        //验证url合法性
+                        auto it_url = m_url_token_session.find(path);
+                        if(it_url == m_url_token_session.end())
+                        {
+                            LogError << "add_session,not find url:" << path;
+                            return send_bad_request("parse target error");
+                        }
+
 
                         CaseInsensitiveMultimap query_params = kkurl::parse_query_string(query_string);
                         auto it_token = query_params.find("token");
@@ -287,6 +328,7 @@ void Manager::accept()
                             socket.shutdown(tcp::socket::shutdown_both, ec);
                             return;
                         }
+                        set_socket_opt(socket);
                         HttpTunnelPtr tunnel = std::make_shared<HttpTunnel>(socket, *this);
                         add_session(path, it_token->second, tunnel);
 
@@ -320,13 +362,6 @@ void Manager::accept()
 bool Manager::add_session(const string& url, const string& token, HttpTunnelPtr session)
 {
     fiber_lock lk(m_mutex);
-//    auto it_url = m_url_token_session.find(url);
-//    if(it_url == m_url_token_session.end())
-//    {
-//        LogError << "add_session,not find url:" << url;
-//        return false;
-//    }
-
     std::unordered_map<string, HttpTunnelPtr>& token_sessions = m_url_token_session[url];
 
     auto session_it = token_sessions.find(token);
