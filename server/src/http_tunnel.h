@@ -9,18 +9,26 @@ typedef boost::fibers::promise<StrResponse> HttpPromise;
 class HttpTunnel
 {
 public:
-    HttpTunnel(TcpSocket &s, Manager& svr);
+    HttpTunnel(TcpSocket &s);
     ~HttpTunnel();
 
     void start();
+
+    //stop暂未实现
     void stop();
 
     StrResponse request(StrRequest& req);
 
 private:
+    void process_send_req();
+
+    void process_recv_res();
+
+private:
     TcpSocket m_socket;
-    Manager& m_svr;
     map<string, HttpPromise> m_http_promise;
+    boost::fibers::mutex m_mutex;
+    uint32_t m_tid = 1;
 
     typedef boost::fibers::unbuffered_channel<StrRequest> send_channel_t;
     send_channel_t m_send_channel;

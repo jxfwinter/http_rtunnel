@@ -1,6 +1,8 @@
 #include "manager.h"
 #include "http_tunnel.h"
 
+#define SETUP_MARK "SET-JRPROXY"
+
 Manager::Manager() :
     m_http_server(ConfigParams::instance().http_thread_pool, ConfigParams::instance().http_listen_addr, ConfigParams::instance().http_listen_port),
     m_work(new io_context_work(m_io_cxt.get_executor())), m_acceptoror(m_io_cxt), m_socket(m_io_cxt)
@@ -244,9 +246,9 @@ void Manager::accept()
                             if(ec)
                             {
                                 LogErrorExt << ec.message();
+                                socket.shutdown(tcp::socket::shutdown_both, ec);
                                 return;
                             }
-                            socket.shutdown(tcp::socket::shutdown_both, ec);
                         };
 
                         string query_string;
@@ -282,11 +284,23 @@ void Manager::accept()
                         if(ec)
                         {
                             LogErrorExt << ec.message();
+                            socket.shutdown(tcp::socket::shutdown_both, ec);
                             return;
                         }
                         HttpTunnelPtr tunnel = std::make_shared<HttpTunnel>(socket, *this);
                         add_session(path, it_token->second, tunnel);
-                        tunnel->start();
+
+                        try
+                        {
+                            //等待结束
+                            tunnel->start();
+                        }
+                        catch (std::exception const &e)
+                        {
+                            LogErrorExt << e.what() << "," << typeid(e).name();
+                        }
+
+                        remove_session(path, it_token->second, tunnel);
                     }
                     catch (std::exception const &e)
                     {

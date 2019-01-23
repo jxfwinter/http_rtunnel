@@ -1,6 +1,9 @@
 #ifndef WS_HTTP_SESSION_H
 #define WS_HTTP_SESSION_H
 
+#define TID "TID-J"
+#define SETUP_MARK "SET-JRPROXY"
+
 #include <string>
 #include <memory>
 #include <map>
@@ -16,18 +19,18 @@ typedef boost::asio::ip::tcp::resolver::results_type ResolverResult;
 typedef boost::asio::ip::tcp::endpoint Endpoint;
 typedef boost::asio::ip::tcp::socket TcpSocket;
 
-namespace address = boost::asio::ip::address;
-
 typedef boost::asio::coroutine Coroutine;
-namespace websocket = boost::beast::websocket;
-typedef websocket::stream<TcpSocket> WebsocketStream;
+using namespace boost::beast;
+
+typedef http::request<http::string_body> StrRequest;
+typedef http::response<http::string_body> StrResponse;
 
 struct HttpCoInfo
 {
     string id;
-    string req_buffer;
-    string res_buffer;
-    char read_buf[256];
+    StrRequest req;
+    StrResponse res;
+    boost::beast::flat_buffer buffer;
     Coroutine http_co;
     TcpSocket http_socket;
 
@@ -49,11 +52,11 @@ enum SOCKET_STATUS {
 //连接状态回调
 typedef std::function<void (SOCKET_STATUS)> ConnectCallback;
 
-class WSHttpSession
+class HttpTunnel
 {
 public:
-    WSHttpSession(IoContext& ioc);
-    ~WSHttpSession();
+    HttpTunnel(IoContext& ioc);
+    ~HttpTunnel();
 
     void set_transmit_local_address(string local_ip, uint16_t local_port) {
         m_local_ip = std::move(local_ip);
@@ -71,12 +74,10 @@ private:
     void start_resolve_co();
 
     void start_conn_co();
+    void start_recv_co();
+    void start_send_co(HttpCoInfoPtr co_info);
 
-    void start_ws_recv_co();
-
-    void start_http_co(string id, string req_buf);
-
-    void start_ws_send_res(HttpCoInfoPtr co_info);
+    void start_http_co(string id, StrRequest &req);
 
     void start_check_timer();
     void stop_check_timer();
@@ -84,7 +85,7 @@ private:
     void loop_resolve(boost::system::error_code ec, ResolverResult r);
     void loop_conn(boost::system::error_code ec);
     void loop_recv(boost::system::error_code ec);
-    void loop_http(boost::system::error_code ec, size_t bytes_transferred, HttpCoInfoPtr co_info);
+    void loop_http(boost::system::error_code ec, HttpCoInfoPtr co_info);
     void loop_send(boost::system::error_code ec);
 
     void loop_check(boost::system::error_code ec);
@@ -93,7 +94,7 @@ private:
 
     IoContext& m_ioc;
     boost::asio::steady_timer m_timer;
-    WebsocketStream m_ws_stream;
+    TcpSocket m_socket;
     std::unique_ptr<Resolver> m_resolver;
 
     string m_local_ip = "0.0.0.0";
@@ -103,9 +104,11 @@ private:
 
     string m_host;
     uint16_t m_port;
-    string m_target;
+    //string m_target;
 
     ResolverResult m_resolve_result;
+    StrRequest m_req;
+    StrResponse m_res;
 
     SOCKET_STATUS m_socket_status = Disconnected;
     Coroutine m_resolve_co;
@@ -117,7 +120,7 @@ private:
 
     boost::beast::flat_buffer m_read_buffer;
 
-    list<string> m_send_queue;
+    list<StrResponse> m_send_response_queue;
 };
 
 #endif // WS_SESSION_H
