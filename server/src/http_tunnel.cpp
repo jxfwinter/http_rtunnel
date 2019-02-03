@@ -135,9 +135,10 @@ void HttpTunnel::process_recv_res()
     boost::system::error_code ec;
     StrResponse res;
     boost::beast::flat_buffer buffer;
+    boost::fibers::future<boost::system::error_code> f;
     while(1)
     {
-        f = http::async_read(socket, buffer, res, boost::asio::fibers::use_future([](boost::system::error_code ec, size_t) -> boost::system::error_code {
+        f = http::async_read(m_socket, buffer, res, boost::asio::fibers::use_future([](boost::system::error_code ec, size_t) -> boost::system::error_code {
                                  return ec;
                              }));
         ec = f.get();
@@ -155,10 +156,10 @@ void HttpTunnel::process_recv_res()
         }
         else
         {
-            const string& tid = (*it).value();
+            boost::string_view tid = (*it).value();
             {
                 std::lock_guard<boost::fibers::mutex> lk(m_mutex);
-                auto msg_it = m_http_promise.find(id);
+                auto msg_it = m_http_promise.find(tid.data());
                 if (msg_it != m_http_promise.end())
                 {
                     res.erase(it);

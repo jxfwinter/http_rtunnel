@@ -15,28 +15,28 @@ static void set_socket_opt(TcpSocket& socket)
     ret = setsockopt(socket.native_handle(), SOL_SOCKET, SO_KEEPALIVE, &flags, sizeof(flags));
     if(ret < 0)
     {
-        KK_PRT("setsockopt SO_KEEPALIVE failed");
+        log_error_ext("setsockopt SO_KEEPALIVE failed");
     }
     ret = setsockopt(socket.native_handle(), IPPROTO_TCP, TCP_KEEPIDLE, &tcp_keepalive_time, sizeof(tcp_keepalive_time));
     if(ret < 0)
     {
-        KK_PRT("setsockopt TCP_KEEPIDLE failed");
+        log_error_ext("setsockopt TCP_KEEPIDLE failed");
     }
     ret = setsockopt(socket.native_handle(), IPPROTO_TCP, TCP_KEEPINTVL, &tcp_keepalive_intvl, sizeof(tcp_keepalive_intvl));
     if(ret < 0)
     {
-        KK_PRT("setsockopt TCP_KEEPINTVL failed");
+        log_error_ext("setsockopt TCP_KEEPINTVL failed");
     }
     ret = setsockopt(socket.native_handle(), IPPROTO_TCP, TCP_KEEPCNT, &tcp_keepalive_probes, sizeof(tcp_keepalive_probes));
     if(ret < 0)
     {
-        KK_PRT("setsockopt TCP_KEEPCNT failed");
+        log_error_ext("setsockopt TCP_KEEPCNT failed");
     }
 }
 
 Manager::Manager() :
     m_http_server(ConfigParams::instance().http_thread_pool, ConfigParams::instance().http_listen_addr, ConfigParams::instance().http_listen_port),
-    m_work(new io_context_work(m_io_cxt.get_executor())), m_acceptoror(m_io_cxt), m_socket(m_io_cxt)
+    m_work(new io_context_work(m_io_cxt.get_executor())), m_acceptor(m_io_cxt), m_socket(m_io_cxt)
 {
     m_listen_ep = tcp::endpoint{boost::asio::ip::make_address(ConfigParams::instance().tunnel_listen_addr),
             ConfigParams::instance().tunnel_listen_port};
@@ -64,7 +64,7 @@ void Manager::start()
     m_http_server.start();
     m_io_cxt.restart();
 
-    m_acceptor_fiber = boost::fibers::fiber([this](){
+    m_accept_fiber = boost::fibers::fiber([this](){
         this->accept();
     });
     for(int i=0; i<m_thread_count; ++i)
@@ -81,9 +81,9 @@ void Manager::stop()
     m_http_server.stop();
     boost::system::error_code ec;
     m_acceptor.close(ec);
-    if(m_acceptor_fiber.joinable())
+    if(m_accept_fiber.joinable())
     {
-        m_acceptor_fiber.join();
+        m_accept_fiber.join();
     }
 
     m_io_cxt.stop();
@@ -329,7 +329,7 @@ void Manager::accept()
                             return;
                         }
                         set_socket_opt(socket);
-                        HttpTunnelPtr tunnel = std::make_shared<HttpTunnel>(socket, *this);
+                        HttpTunnelPtr tunnel = std::make_shared<HttpTunnel>(socket);
                         add_session(path, it_token->second, tunnel);
 
                         try

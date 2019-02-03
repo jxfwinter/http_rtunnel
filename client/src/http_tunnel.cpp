@@ -192,10 +192,9 @@ void HttpTunnel::loop_conn(boost::system::error_code ec)
             yield break;
         }
         {
-            http::status s = m_res.result();
-            if(s >= 300 || s < 200)
+            if((int)m_res.result() >= 300 || (int)m_res.result() < 200)
             {
-                KK_PRT("setup error:%d", (int)s);
+                KK_PRT("setup error:%d", (int)m_res.result());
                 m_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
                 m_socket_status = Disconnected;
                 yield break;
@@ -244,7 +243,7 @@ void HttpTunnel::loop_recv(boost::system::error_code ec)
             {
                 //请求
                 m_req.erase(it);
-                start_http_co((*it).value(), m_req);
+                start_http_co((*it).value().data(), m_req);
             }
         }
     }
@@ -342,8 +341,8 @@ void HttpTunnel::loop_check(boost::system::error_code ec)
                 start_resolve_co();
             }
 
-            m_timer->expires_after(std::chrono::seconds(30));
-            yield m_timer->async_wait([this](boost::system::error_code ec) {
+            m_timer.expires_after(std::chrono::seconds(30));
+            yield m_timer.async_wait([this](boost::system::error_code ec) {
                 this->loop_check(ec);
             });
         }

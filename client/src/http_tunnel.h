@@ -1,5 +1,5 @@
-#ifndef WS_HTTP_SESSION_H
-#define WS_HTTP_SESSION_H
+#ifndef CLIENT_HTTP_TUNNEL_H
+#define CLIENT_HTTP_TUNNEL_H
 
 #define SETUP_MARK "SET-JRPROXY"
 #define TID "TID-J"
@@ -123,4 +123,4 @@ private:
     list<StrResponse> m_send_response_queue;
 };
 
-#endif // WS_SESSION_H
+#endif // CLIENT_HTTP_TUNNEL_H
