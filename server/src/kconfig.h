@@ -46,7 +46,7 @@ typedef boost::asio::ip::tcp::resolver::results_type ResolverResult;
 typedef std::lock_guard<boost::fibers::mutex> fiber_lock;
 
 
-#define SETUP_MARK "SET-JRPROXY"
+#define SESSION_ID "JR-SID"
 #define TID "TID-J"
 
 class ConfigParams
@@ -64,7 +64,6 @@ public:
     uint16_t tunnel_thread_pool = 3;
 
     uint16_t req_timeout_secs = 15;
-    vector<string> listen_urls;
 
     string log_path = "./http_rrproxy.log";
     boost::log::trivial::severity_level log_level = boost::log::trivial::debug;

@@ -18,10 +18,10 @@ public:
     void stop();
 
     //返回true成功, 返回false失败
-    bool add_session(const string& url, const string& token, HttpTunnelPtr session);
+    bool add_session(const string& session_id, HttpTunnelPtr session);
     //返回nullptr表示没找到
-    HttpTunnelPtr find_session(const string& url, const string& token);
-    void remove_session(const string& url, const string& token, HttpTunnelPtr session);
+    HttpTunnelPtr find_session(const string& session_id);
+    void remove_session(const string& session_id, HttpTunnelPtr session);
 
 private:
     void accept();
@@ -45,8 +45,8 @@ private:
     std::vector<std::thread> m_threads;
     tcp::endpoint m_listen_ep;
 
-    //key为url，不带?后面的参数
-    std::map<string,  std::unordered_map<string, HttpTunnelPtr>> m_url_token_session;
+    //key为session id
+    std::unordered_map<string, HttpTunnelPtr> m_sessions;
     int m_tunnel_count = 0;
     boost::fibers::mutex m_mutex;
 };

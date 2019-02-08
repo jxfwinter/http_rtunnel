@@ -43,15 +43,21 @@ Manager::Manager() :
 
     m_thread_count = ConfigParams::instance().tunnel_thread_pool;
 
-    //初始化允许的url，不包含查询参数
-    ConfigParams& cfg = ConfigParams::instance();
-    for(auto& url : cfg.listen_urls)
-    {
-        m_url_token_session[url];
-        m_http_server.resource["^" + url + "$"][http::verb::post] = [this](RequestContext& cxt) {
-            this->process_http_req(cxt);
-        };
-    }
+    m_http_server.resource["/.*"][http::verb::post] = [this](RequestContext& cxt) {
+        this->process_http_req(cxt);
+    };
+    m_http_server.resource["/.*"][http::verb::get] = [this](RequestContext& cxt) {
+        this->process_http_req(cxt);
+    };
+    m_http_server.resource["/.*"][http::verb::put] = [this](RequestContext& cxt) {
+        this->process_http_req(cxt);
+    };
+    m_http_server.resource["/.*"][http::verb::delete_] = [this](RequestContext& cxt) {
+        this->process_http_req(cxt);
+    };
+    m_http_server.resource["/.*"][http::verb::patch] = [this](RequestContext& cxt) {
+        this->process_http_req(cxt);
+    };
 }
 
 Manager::~Manager()
@@ -97,17 +103,19 @@ void Manager::process_http_req(RequestContext& cxt)
 {
     try
     {
-        auto token_it = cxt.query_params.find("token");
-        if(token_it == cxt.query_params.end())
+        auto session_it = cxt.req.find(SESSION_ID);
+        if(session_it == cxt.req.end())
         {
-            cxt.res.result(http::status::bad_request);
+            LogError << "not has session id";
+            cxt.res.result(http::status::precondition_failed);
             return;
         }
-        //将请求转变为短连接
-        bool old_keep_alive = cxt.req.keep_alive();
-        cxt.req.keep_alive(false);
 
-        HttpTunnelPtr session = find_session(cxt.path, token_it->second);
+        //将请求转变为短连接
+        //bool old_keep_alive = cxt.req.keep_alive();
+        //cxt.req.keep_alive(false);
+
+        HttpTunnelPtr session = find_session(session_it->value().data());
         if(!session)
         {
             cxt.res.result(http::status::not_found);
@@ -115,7 +123,7 @@ void Manager::process_http_req(RequestContext& cxt)
         }
         cxt.res = session->request(cxt.req);
         //将响应keep_alive恢复
-        cxt.res.keep_alive(old_keep_alive);
+        //cxt.res.keep_alive(old_keep_alive);
     }
     catch(std::exception& e)
     {
@@ -284,41 +292,17 @@ void Manager::accept()
                         };
 
                         //难证是否为代理请求
-                        auto setup_it = req.find(SETUP_MARK);
-                        if(setup_it == req.end())
+                        auto session_it = req.find(SESSION_ID);
+                        if(session_it == req.end())
                         {
-                            LogError << "not setup request";
-                            return send_bad_request("not setup request");
-                        }
-
-                        string query_string;
-                        string path;
-                        if(!kkurl::parse_target(req.target(), path, query_string))
-                        {
-                            LogError << "parse target error," << req.target();
-                            return send_bad_request("parse target error");
-                        }
-                        //验证url合法性
-                        auto it_url = m_url_token_session.find(path);
-                        if(it_url == m_url_token_session.end())
-                        {
-                            LogError << "add_session,not find url:" << path;
-                            return send_bad_request("parse target error");
-                        }
-
-
-                        CaseInsensitiveMultimap query_params = kkurl::parse_query_string(query_string);
-                        auto it_token = query_params.find("token");
-                        if(it_token == query_params.end())
-                        {
-                            LogError << "not has token," << req.target();
-                            return send_bad_request("not has token");
+                            LogError << "not has session id";
+                            return send_bad_request("not has session id");
                         }
 
                         http::response<http::empty_body> res{http::status::ok, req.version()};
                         res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
                         res.keep_alive(req.keep_alive());
-                        f = http::async_write(socket, res, boost::asio::fibers::use_future([](boost::system::error_code ec, size_t n) {
+                        f = http::async_write(socket, res, boost::asio::fibers::use_future([](boost::system::error_code ec, size_t) {
                                                   return ec;
                                               }));
                         ec = f.get();
@@ -330,7 +314,7 @@ void Manager::accept()
                         }
                         set_socket_opt(socket);
                         HttpTunnelPtr tunnel = std::make_shared<HttpTunnel>(socket);
-                        add_session(path, it_token->second, tunnel);
+                        add_session(session_it->value().data(), tunnel);
 
                         try
                         {
@@ -342,7 +326,7 @@ void Manager::accept()
                             LogErrorExt << e.what() << "," << typeid(e).name();
                         }
 
-                        remove_session(path, it_token->second, tunnel);
+                        remove_session(session_it->value().data(), tunnel);
                     }
                     catch (std::exception const &e)
                     {
@@ -359,52 +343,36 @@ void Manager::accept()
     }
 }
 
-bool Manager::add_session(const string& url, const string& token, HttpTunnelPtr session)
+bool Manager::add_session(const string& session_id, HttpTunnelPtr session)
 {
     fiber_lock lk(m_mutex);
-    std::unordered_map<string, HttpTunnelPtr>& token_sessions = m_url_token_session[url];
-
-    auto session_it = token_sessions.find(token);
-    if(session_it != token_sessions.end())
+    auto session_it = m_sessions.find(session_id);
+    if(session_it != m_sessions.end())
     {
-        session_it->second->stop();
+        //session_it->second->stop();
     }
-    token_sessions["token"] = session;
+    m_sessions[session_id] = session;
     ++m_tunnel_count;
     return true;
 }
 
-HttpTunnelPtr Manager::find_session(const string& url, const string& token)
+HttpTunnelPtr Manager::find_session(const string& session_id)
 {
     fiber_lock lk(m_mutex);
-    auto it_url = m_url_token_session.find(url);
-    if(it_url == m_url_token_session.end())
+    auto session_it = m_sessions.find(session_id);
+    if(session_it == m_sessions.end())
     {
-        LogError << "add_session,not find url:" << url;
-        return nullptr;
-    }
-    std::unordered_map<string, HttpTunnelPtr>& token_sessions = it_url->second;
-
-    auto session_it = token_sessions.find(token);
-    if(session_it == it_url->second.end())
-    {
+        LogError << "find_session,not find session:" << session_id;
         return nullptr;
     }
     return session_it->second;
 }
 
-void Manager::remove_session(const string& url, const string& token, HttpTunnelPtr session)
+void Manager::remove_session(const string& session_id, HttpTunnelPtr session)
 {
     fiber_lock lk(m_mutex);
-    auto it_url = m_url_token_session.find(url);
-    if(it_url == m_url_token_session.end())
-    {
-        LogError << "add_session,not find url:" << url;
-        return;
-    }
-    std::unordered_map<string, HttpTunnelPtr>& token_sessions = it_url->second;
-    auto session_it = token_sessions.find(token);
-    if(session_it == it_url->second.end())
+    auto session_it = m_sessions.find(session_id);
+    if(session_it == m_sessions.end())
     {
         return;
     }
@@ -412,6 +380,6 @@ void Manager::remove_session(const string& url, const string& token, HttpTunnelP
     {
         return;
     }
-    token_sessions.erase(session_it);
+    m_sessions.erase(session_it);
     --m_tunnel_count;
 }

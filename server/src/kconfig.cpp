@@ -49,7 +49,6 @@ bool ConfigParams::init(int argc, char **argv)
                 ("tunnel_listen_port", po::value<string>(), "tunnel listen address")
                 ("tunnel_listen_port", po::value<uint16_t>(), "tunnel listen port")
                 ("req_timeout_secs", po::value<uint16_t>(), "request timeout seconds")
-                ("listen_urls", po::value<vector<string>>(), "http and ws listen urls")
                 ("log_path", po::value<string>(), "log file path")
                 ("log_level", po::value<string>(), "log level:trace debug info warning error fatal");
 
@@ -82,8 +81,6 @@ bool ConfigParams::init(int argc, char **argv)
         tunnel_listen_port = vm["tunnel_listen_port"].as<uint16_t>();
 
         req_timeout_secs = vm["req_timeout_secs"].as<uint16_t>();
-
-        listen_urls = vm["listen_urls"].as<vector<string>>();
 
         log_path = vm["log_path"].as<string>();
 

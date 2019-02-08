@@ -1,7 +1,7 @@
 #ifndef CLIENT_HTTP_TUNNEL_H
 #define CLIENT_HTTP_TUNNEL_H
 
-#define SETUP_MARK "SET-JRPROXY"
+#define SESSION_ID "JR-SID"
 #define TID "TID-J"
 
 #include <string>
@@ -67,7 +67,7 @@ public:
         m_conn_cb = cb;
     }
 
-    void start(string host, uint16_t port, string target);
+    void start(string host, uint16_t port, string session_id);
     void stop();
 
 private:
@@ -105,6 +105,7 @@ private:
     string m_host;
     uint16_t m_port;
     //string m_target;
+    string m_session_id;
 
     ResolverResult m_resolve_result;
     StrRequest m_req;

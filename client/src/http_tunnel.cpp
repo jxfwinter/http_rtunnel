@@ -50,8 +50,7 @@ static void set_socket_opt(TcpSocket& socket)
 HttpTunnel::HttpTunnel(IoContext& ioc) :
     m_ioc(ioc), m_timer(m_ioc), m_socket(m_ioc)
 {
-    m_req.keep_alive(true);
-    m_req.insert(SETUP_MARK, "1");
+
 }
 
 HttpTunnel::~HttpTunnel()
@@ -59,13 +58,12 @@ HttpTunnel::~HttpTunnel()
 
 }
 
-void HttpTunnel::start(string host, uint16_t port, string target)
+void HttpTunnel::start(string host, uint16_t port, string session_id)
 {
     m_send_response_queue.clear();
     m_host = std::move(host);
     m_port = port;
-    m_req.target(target);
-    //m_target = std::move(target);
+    m_session_id = std::move(session_id);
 
     start_resolve_co();
     start_check_timer();
@@ -170,6 +168,10 @@ void HttpTunnel::loop_conn(boost::system::error_code ec)
             yield break;
         }
         set_socket_opt(m_socket);
+        m_req = {};
+        m_req.keep_alive(true);
+        m_req.insert(SESSION_ID, m_session_id);
+        m_req.target("/setup_rproxy");
         KK_PRT("start setup");
         yield http::async_write(m_socket, m_req, [this](boost::system::error_code ec, size_t) {
             this->loop_conn(ec);
