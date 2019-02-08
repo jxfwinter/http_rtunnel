@@ -107,7 +107,7 @@ void Manager::process_http_req(RequestContext& cxt)
         if(session_it == cxt.req.end())
         {
             LogError << "not has session id";
-            cxt.res.result(http::status::precondition_failed);
+            cxt.res.result(http::status::bad_request);
             return;
         }
 
