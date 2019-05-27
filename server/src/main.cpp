@@ -5,19 +5,18 @@
 
 int main(int argc,char ** argv)
 {
+    ConfigParams& params = ConfigParams::instance();
+    //初始化
+    if(!params.init(argc, argv))
+    {
+        return 1;
+    }
+
     try
     {
         FiberFrameContext& frame_cxt = FiberFrameContext::instance();
         frame_cxt.run_thread_count = 3;
         frame_cxt.init();
-
-        ConfigParams& params = ConfigParams::instance();
-        //初始化
-        if(!params.init(argc, argv))
-        {
-            return 1;
-        }
-
         init_logging(params.log_path, params.log_level);
 
         Manager mgr;

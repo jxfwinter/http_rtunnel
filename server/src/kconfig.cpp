@@ -40,7 +40,7 @@ bool ConfigParams::init(int argc, char **argv)
         po::options_description cmdline_options("Generic options");
         cmdline_options.add_options()
                 ("help,h", "produce help message")
-                ("config,c", po::value<string>(&config_file)->default_value("../config/http_rrproxy_ws.cfg"));
+                ("config,c", po::value<string>(&config_file)->default_value("../config/http_rrproxy.cfg"));
 
         po::options_description config_file_options("configure file options");
         config_file_options.add_options()
@@ -79,7 +79,7 @@ bool ConfigParams::init(int argc, char **argv)
         }
 
         http_listen_addr = vm["http_listen_addr"].as<string>();
-        http_listen_port = vm["http_listen_addr"].as<uint16_t>();
+        http_listen_port = vm["http_listen_port"].as<uint16_t>();
         http_thread_pool = vm["http_thread_pool"].as<uint16_t>();
 
         tunnel_listen_addr = vm["tunnel_listen_addr"].as<string>();
