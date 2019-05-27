@@ -228,7 +228,7 @@ void Manager::accept()
         boost::system::error_code ec;
         for (;;)
         {
-            f = m_acceptor.async_accept(m_socket,
+            f = m_acceptor.async_accept<boost::asio::ip::tcp, boost::asio::executor>(m_socket,
                                         boost::asio::fibers::use_future([](boost::system::error_code ec){
                                             return ec;
                                         }));
