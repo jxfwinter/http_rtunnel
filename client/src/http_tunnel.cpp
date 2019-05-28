@@ -3,6 +3,7 @@
 #include <chrono>
 #include <boost/asio/read.hpp>
 #include <boost/asio/write.hpp>
+#include <iostream>
 
 #define KK_PRT(fmt...)   \
     do {\
@@ -169,9 +170,11 @@ void HttpTunnel::loop_conn(boost::system::error_code ec)
         }
         set_socket_opt(m_socket);
         m_req = {};
+        m_req.method(http::verb::post);
         m_req.keep_alive(true);
-        m_req.insert(SESSION_ID, m_session_id);
+        m_req.set(SESSION_ID, m_session_id);
         m_req.target("/setup_rproxy");
+        m_req.content_length(m_req.body().size());
         KK_PRT("start setup");
         yield http::async_write(m_socket, m_req, [this](boost::system::error_code ec, size_t) {
             this->loop_conn(ec);
@@ -204,6 +207,7 @@ void HttpTunnel::loop_conn(boost::system::error_code ec)
         }
 
         m_socket_status = Connected;
+        KK_PRT("setup success");
         if(m_conn_cb)
         {
             m_conn_cb(m_socket_status);
@@ -234,6 +238,7 @@ void HttpTunnel::loop_recv(boost::system::error_code ec)
                 }
                 yield break;
             }
+            std::cout << "recv req:" << m_req << "\n";
             //检查请求是否合法
             auto it = m_req.find(TID);
             if(it == m_req.end())
@@ -244,8 +249,9 @@ void HttpTunnel::loop_recv(boost::system::error_code ec)
             else
             {
                 //请求
+                boost::string_view tid = (*it).value();
                 m_req.erase(it);
-                start_http_co((*it).value().data(), m_req);
+                start_http_co(tid.to_string(), m_req);
             }
         }
     }
@@ -262,12 +268,14 @@ void HttpTunnel::loop_http(boost::system::error_code ec, HttpCoInfoPtr co_info)
         {
             KK_PRT("error:%d,%s", ec.value(), ec.message().c_str());
             co_info->res.result(http::status::connection_closed_without_response);
-            co_info->res.insert(TID, co_info->id);
+            co_info->res.set(TID, co_info->id);
             start_send_co(co_info);
             yield break;
         }
         //使用短连接
         co_info->req.keep_alive(false);
+        co_info->req.content_length(co_info->req.body().size());
+        std::cout << "send req: " << co_info->req << "\n";
         yield http::async_write(co_info->http_socket, co_info->req, [co_info, this](boost::system::error_code ec, size_t){
             this->loop_http(ec, co_info);
         });
@@ -275,7 +283,7 @@ void HttpTunnel::loop_http(boost::system::error_code ec, HttpCoInfoPtr co_info)
         {
             KK_PRT("error:%d,%s", ec.value(), ec.message().c_str());
             co_info->res.result(http::status::connection_closed_without_response);
-            co_info->res.insert(TID, co_info->id);
+            co_info->res.set(TID, co_info->id);
             start_send_co(co_info);
             yield break;
         }
@@ -286,11 +294,12 @@ void HttpTunnel::loop_http(boost::system::error_code ec, HttpCoInfoPtr co_info)
         {
             KK_PRT("error:%d,%s", ec.value(), ec.message().c_str());
             co_info->res.result(http::status::connection_closed_without_response);
-            co_info->res.insert(TID, co_info->id);
+            co_info->res.set(TID, co_info->id);
             start_send_co(co_info);
             yield break;
         }
-        co_info->res.insert(TID, co_info->id);
+        co_info->res.set(TID, co_info->id);
+        std::cout << "recv res: " << co_info->res << "\n";
         start_send_co(co_info);
     }
 }
@@ -304,6 +313,10 @@ void HttpTunnel::loop_send(boost::system::error_code ec)
             yield
             {
                 StrResponse& res = m_send_response_queue.front();
+                //转换成长连接
+                res.keep_alive(true);
+                res.content_length(res.body().size());
+                std::cout << "send res:" << res << "\n";
                 http::async_write(m_socket, res, [this](boost::system::error_code ec, std::size_t) {
                     this->loop_send(ec);
                 });

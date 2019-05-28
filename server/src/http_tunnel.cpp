@@ -26,8 +26,10 @@ void HttpTunnel::start()
 
     m_recv_fiber.swap(frecv);
 
-    m_send_fiber.join();
     m_recv_fiber.join();
+
+    m_send_channel.close();
+    m_send_fiber.join(); 
 }
 
 void HttpTunnel::stop()
@@ -51,7 +53,8 @@ StrResponse HttpTunnel::request(StrRequest& req)
         m_http_promise[tid] = std::move(promise);
     }
 
-    req.insert(TID, tid);
+    req.set(TID, tid);
+    LogDebug << "tid:" << tid;
 
     boost::fibers::channel_op_status s = m_send_channel.push(std::move(req));
     if(s != boost::fibers::channel_op_status::success)
@@ -117,6 +120,7 @@ void HttpTunnel::process_send_req()
             }
             break;
         }
+        req.content_length(req.body().size());
         f = http::async_write(m_socket, req, boost::asio::fibers::use_future([](boost::system::error_code ec, size_t n) {
                                   return ec;
                               }));
@@ -159,7 +163,7 @@ void HttpTunnel::process_recv_res()
             boost::string_view tid = (*it).value();
             {
                 std::lock_guard<boost::fibers::mutex> lk(m_mutex);
-                auto msg_it = m_http_promise.find(tid.data());
+                auto msg_it = m_http_promise.find(tid.to_string());
                 if (msg_it != m_http_promise.end())
                 {
                     res.erase(it);

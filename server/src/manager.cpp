@@ -111,19 +111,20 @@ void Manager::process_http_req(RequestContext& cxt)
             return;
         }
 
-        //将请求转变为短连接
-        //bool old_keep_alive = cxt.req.keep_alive();
-        //cxt.req.keep_alive(false);
+        //反向session必须是长连接
+        bool old_keep_alive = cxt.req.keep_alive();
+        cxt.req.keep_alive(true);
 
-        HttpTunnelPtr session = find_session(session_it->value().data());
+        HttpTunnelPtr session = find_session(session_it->value().to_string());
         if(!session)
         {
+            cxt.res.keep_alive(old_keep_alive);
             cxt.res.result(http::status::not_found);
             return;
         }
         cxt.res = session->request(cxt.req);
         //将响应keep_alive恢复
-        //cxt.res.keep_alive(old_keep_alive);
+        cxt.res.keep_alive(old_keep_alive);
     }
     catch(std::exception& e)
     {
@@ -273,11 +274,12 @@ void Manager::accept()
                                 [&req, &socket, &f, &ec](boost::beast::string_view why)
                         {
                             StrResponse res{http::status::bad_request, req.version()};
-                            //res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+                            res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
                             res.set(http::field::content_type, "text/html");
                             res.keep_alive(req.keep_alive());
                             res.body() = why.to_string();
                             res.prepare_payload();
+                            res.content_length(res.body().size());
                             f = http::async_write(socket, res, boost::asio::fibers::use_future([](boost::system::error_code ec, size_t n) {
                                                       return ec;
                                                   }));
@@ -299,9 +301,10 @@ void Manager::accept()
                             return send_bad_request("not has session id");
                         }
 
-                        http::response<http::empty_body> res{http::status::ok, req.version()};
+                        StrResponse res{http::status::ok, req.version()};
                         res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
                         res.keep_alive(req.keep_alive());
+                        res.content_length(res.body().size());
                         f = http::async_write(socket, res, boost::asio::fibers::use_future([](boost::system::error_code ec, size_t) {
                                                   return ec;
                                               }));
@@ -314,7 +317,9 @@ void Manager::accept()
                         }
                         set_socket_opt(socket);
                         HttpTunnelPtr tunnel = std::make_shared<HttpTunnel>(socket);
-                        add_session(session_it->value().data(), tunnel);
+                        boost::string_view session_id = session_it->value();
+                        add_session(session_id.to_string(), tunnel);
+                        LogDebug << "incoming session_id:" << session_id;
 
                         try
                         {
@@ -326,7 +331,8 @@ void Manager::accept()
                             LogErrorExt << e.what() << "," << typeid(e).name();
                         }
 
-                        remove_session(session_it->value().data(), tunnel);
+                        remove_session(session_it->value().to_string(), tunnel);
+                        LogDebug << "remove session_id:" << session_id;
                     }
                     catch (std::exception const &e)
                     {
