@@ -103,7 +103,7 @@ private:
     ConnectCallback m_conn_cb;
 
     string m_host;
-    uint16_t m_port;
+    string m_port;
     //string m_target;
     string m_session_id;
 

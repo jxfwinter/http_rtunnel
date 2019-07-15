@@ -63,7 +63,9 @@ void HttpTunnel::start(string host, uint16_t port, string session_id)
 {
     m_send_response_queue.clear();
     m_host = std::move(host);
-    m_port = port;
+    char tmp[8];
+    sprintf(tmp, "%d", port);
+    m_port = tmp;
     m_session_id = std::move(session_id);
 
     start_resolve_co();
@@ -139,7 +141,7 @@ void HttpTunnel::loop_resolve(boost::system::error_code ec, ResolverResult r)
     {
         m_socket_status = Resolving;
         KK_PRT("start resolve");
-        yield m_resolver->async_resolve(Endpoint{boost::asio::ip::make_address(m_host, ec), m_port}, [this](boost::system::error_code ec, ResolverResult r) {
+        yield m_resolver->async_resolve(m_host, m_port, [this](boost::system::error_code ec, ResolverResult r) {
             this->loop_resolve(ec, r);
         });
         if(ec)
