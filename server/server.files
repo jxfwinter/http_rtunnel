@@ -1,9 +1,0 @@
-config/http_rproxy.cfg
-src/CMakeLists.txt
-src/http_tunnel.cpp
-src/http_tunnel.h
-src/kconfig.cpp
-src/kconfig.h
-src/main.cpp
-src/manager.cpp
-src/manager.h
