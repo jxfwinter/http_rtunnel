@@ -47,7 +47,7 @@ HttpSessionInfo::HttpSessionInfo(TcpSocket& s) : socket(std::move(s))
 HttpTunnelServer::HttpTunnelServer(IoContext &ioc, const string& listen_address, uint16_t listen_port):
     m_ioc(ioc), m_acceptor(m_ioc), m_socket(m_ioc)
 {
-    m_listen_ep = tcp::endpoint{boost::asio::ip::make_address(listen_address), listen_port};
+    m_listen_ep = Endpoint{boost::asio::ip::make_address(listen_address), listen_port};
 }
 
 HttpTunnelServer::~HttpTunnelServer()
@@ -57,7 +57,8 @@ HttpTunnelServer::~HttpTunnelServer()
 
 void HttpTunnelServer::start()
 {
-    m_acceptor.open(endpoint.protocol(), ec);
+    BSErrorCode ec;
+    m_acceptor.open(m_listen_ep.protocol(), ec);
     if(ec)
     {
         log_error_ext(ec.message());
@@ -65,7 +66,7 @@ void HttpTunnelServer::start()
     }
 
     m_acceptor.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true), ec);
-    m_acceptor.bind(endpoint, ec);
+    m_acceptor.bind(m_listen_ep, ec);
     if(ec)
     {
         log_error_ext(ec.message());
@@ -84,7 +85,7 @@ void HttpTunnelServer::start()
 
 void HttpTunnelServer::stop()
 {
-    boost::system::error_code ec;
+    BSErrorCode ec;
     m_acceptor.close(ec);
 }
 
@@ -98,8 +99,9 @@ void HttpTunnelServer::start_init_session(TcpSocket s)
 void HttpTunnelServer::start_http_session(InitSessionInfoPtr init_info)
 {
     HttpSessionInfoPtr co_info(new HttpSessionInfo(init_info->socket));
+    co_info->timeout = g_cfg->req_timeout_secs;
     co_info->req = std::move(init_info->req);
-    loop_http_session({}, co_info)
+    loop_http_session({}, co_info);
 }
 
 #include <boost/asio/yield.hpp>
@@ -144,7 +146,7 @@ void HttpTunnelServer::loop_init_session(BSErrorCode ec, InitSessionInfoPtr co_i
             //为建立隧道请求
             {
                 auto id_it = co_info->req.find(SESSION_ID);
-                if(id_it != cxt.req.end())
+                if(id_it != co_info->req.end())
                 {
                     co_info->session_id = (*id_it).value().to_string();
                 }
@@ -200,7 +202,7 @@ void HttpTunnelServer::loop_http_session(BSErrorCode ec, HttpSessionInfoPtr co_i
             //请求已接收
             {
                 auto id_it = co_info->req.find(SESSION_ID);
-                if(id_it != cxt.req.end())
+                if(id_it != co_info->req.end())
                 {
                     co_info->session_id = (*id_it).value().to_string();
                 }
@@ -235,7 +237,7 @@ void HttpTunnelServer::loop_http_session(BSErrorCode ec, HttpSessionInfoPtr co_i
             }
             else
             {
-                yield co_info->session->async_request(std::move(co_info->req), [co_info, this](StringResponse res) {
+                yield co_info->session->async_request(std::move(co_info->req), co_info->timeout, [co_info, this](StringResponse res) {
                     co_info->res = std::move(res);
                     this->loop_http_session({}, co_info);
                 });
@@ -294,7 +296,7 @@ void HttpTunnelServer::add_tunnel_session(InitSessionInfoPtr init_info)
         //session_it->second->stop();
     }
     init_info->session = std::make_shared<HttpTunnelSession>(init_info->socket, init_info->session_id);
-    m_sessions[session_id] = init_info->session;
+    m_sessions[init_info->session_id] = init_info->session;
 }
 
 HttpTunnelSessionPtr HttpTunnelServer::find_session(const string& session_id)

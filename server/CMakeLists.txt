@@ -20,7 +20,7 @@ link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../fiber_kit/lib)
 SET(EXECUTABLE_OUTPUT_PATH ${OUTDIR})
 add_executable(${PROJECT_NAME} ${SRC_LIST})
 
-set(KLink_LIBRARIES klogger_sync request_api_server backtrace pthread dl crypto ssl)
+set(KLink_LIBRARIES pthread dl crypto ssl)
 target_link_libraries(${PROJECT_NAME} -Wl,--start-group ${Boost_LIBRARIES} ${KLink_LIBRARIES} -Wl,--end-group)
 SET(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS_RELWITHDEBINFO})
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")

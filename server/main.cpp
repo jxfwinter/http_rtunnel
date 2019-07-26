@@ -1,32 +1,30 @@
 #include "kconfig.h"
 #include "http_tunnel_server.h"
-#include "fiber_frame_context.hpp"
 #include <iostream>
 
 int main(int argc,char ** argv)
 {
-    ConfigParams& params = ConfigParams::instance();
+    g_cfg = new ConfigParams();
     //初始化
-    if(!params.init(argc, argv))
+    if(!init_params(argc, argv, *g_cfg))
     {
         return 1;
     }
 
-    try
-    {
-        FiberFrameContext& frame_cxt = FiberFrameContext::instance();
-        frame_cxt.run_thread_count = 3;
-        frame_cxt.init();
-        init_logging(params.log_path, params.log_level);
+    init_logging(g_cfg->log_path, g_cfg->log_level, true);
+    IoContext ioc;
 
-        HttpTunnelServer mgr;
-        mgr.start();
+    HttpTunnelServer server(ioc, g_cfg->http_listen_addr, g_cfg->http_listen_port);
+    server.start();
 
-        frame_cxt.wait();
-    }
-    catch(std::exception const &e)
+    std::vector<std::thread> v;
+    v.reserve(g_cfg->http_thread_pool - 1);
+    for(auto i = g_cfg->http_thread_pool - 1; i > 0; --i)
     {
-        std::cerr << "exit! unhandled exception: " << e.what() << std::endl;
+        v.emplace_back([&ioc]{
+            ioc.run();
+        });
     }
+    ioc.run();
     return 0;
 }

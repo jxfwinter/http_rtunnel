@@ -31,7 +31,7 @@ void HttpTunnelSession::async_request(StringRequest req, int timeout, RequestCal
     {
         char tmp[32];
         std::lock_guard<std::mutex> lk(m_mutex);
-        sprintf(tid, "%d", m_tid);
+        sprintf(tmp, "%d", m_tid);
         ++m_tid;
         tid = tmp;
     }
@@ -69,7 +69,7 @@ TMsgContextPtr HttpTunnelSession::get_non_send_tmsg()
     std::lock_guard<std::mutex> lk(m_mutex);
     for (auto it = m_all_req_cxt.cbegin(); it != m_all_req_cxt.cend(); ++it)
     {
-        TMsgContextPtr& ptr = *it;
+        TMsgContextPtr ptr = *it;
         bool sended = ptr->sended;
         if(!sended)
         {

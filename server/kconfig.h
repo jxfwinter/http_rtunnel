@@ -43,6 +43,7 @@ typedef boost::asio::coroutine Coroutine;
 typedef boost::asio::ip::tcp::resolver Resolver;
 typedef boost::asio::ip::tcp::resolver::results_type ResolverResult;
 typedef boost::asio::deadline_timer DTimer;
+using namespace boost::asio::ip;
 
 typedef boost::system::error_code BSErrorCode;
 namespace http = boost::beast::http;
@@ -52,12 +53,8 @@ typedef http::response<http::string_body> StringResponse;
 #define SESSION_ID "JR-SID"
 #define TID "TID-J"
 
-class ConfigParams
+struct ConfigParams
 {
-public:
-    bool init(int argc, char **argv);
-    static ConfigParams& instance();
-
     string http_listen_addr = "0.0.0.0";
     uint16_t http_listen_port = 3080;
     uint16_t http_thread_pool = 3;
@@ -70,10 +67,11 @@ public:
 
     string log_path = "./http_rrproxy.log";
     boost::log::trivial::severity_level log_level = boost::log::trivial::debug;
-
-private:
-    ConfigParams();
-    static ConfigParams *m_instance;
 };
+
+//初始化参数
+bool init_params(int argc, char** argv, ConfigParams& params);
+
+extern ConfigParams* g_cfg;
 
 #endif

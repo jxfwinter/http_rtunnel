@@ -18,7 +18,7 @@ struct InitSessionInfo
     HttpTunnelSessionPtr session;
     InitSessionInfo(TcpSocket& s);
 };
-typedef shared_ptr<InitSessionInfo> InitSessionInfoPtr;
+typedef std::shared_ptr<InitSessionInfo> InitSessionInfoPtr;
 
 struct HttpSessionInfo
 {
@@ -28,11 +28,12 @@ struct HttpSessionInfo
     StringRequest req;
     StringResponse res;
     string session_id;
+    int timeout = 10;
     HttpTunnelSessionPtr session;
 
     HttpSessionInfo(TcpSocket& s);
 };
-typedef shared_ptr<HttpSessionInfo> HttpSessionInfoPtr;
+typedef std::shared_ptr<HttpSessionInfo> HttpSessionInfoPtr;
 
 class HttpTunnelServer
 {
@@ -53,6 +54,8 @@ public:
 
 private:
     void accept();
+
+    void start_init_session(TcpSocket s);
 
     void start_http_session(InitSessionInfoPtr init_info);
 

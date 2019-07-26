@@ -6,6 +6,7 @@ client/src/CMakeLists.txt
 client/src/http_tunnel_client.cpp
 client/src/http_tunnel_client.h
 client/src/main.cpp
+config/http_rproxy.cfg
 server/CMakeLists.txt
 server/config/http_rproxy.cfg
 server/http_tunnel_server.cpp
