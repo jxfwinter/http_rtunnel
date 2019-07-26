@@ -136,7 +136,7 @@ void HttpTunnelServer::loop_init_session(BSErrorCode ec, InitSessionInfoPtr co_i
         });
         if(ec)
         {
-            log_error_ext("loop_init_session failed, %1%", ec.message());
+            log_warning_ext("loop_init_session failed, %1%", ec.message());
             return;
         }
         if(co_info->req.method() == http::verb::connect)
@@ -173,10 +173,15 @@ void HttpTunnelServer::loop_init_session(BSErrorCode ec, InitSessionInfoPtr co_i
             });
             if(ec)
             {
-                log_error_ext("loop_init_session failed, %1%", ec.message());
+                log_warning_ext("loop_init_session failed, %1%", ec.message());
                 return;
             }
             add_tunnel_session(co_info);
+            yield co_info->session->async_run([this, co_info](BSErrorCode ec) {
+                this->loop_init_session(ec, co_info);
+            });
+            log_warning_ext("remove tunnel, err:%1%, session id:%2%", ec.message(), co_info->session_id);
+            remove_tunnel_session(co_info->session_id, co_info->session);
         }
         else
         {
@@ -219,7 +224,7 @@ void HttpTunnelServer::loop_http_session(BSErrorCode ec, HttpSessionInfoPtr co_i
                 });
                 if(ec)
                 {
-                    log_error_ext(ec.message());
+                    log_warning_ext(ec.message());
                     return;
                 }
                 if(co_info->res.need_eof())
@@ -261,7 +266,7 @@ void HttpTunnelServer::loop_http_session(BSErrorCode ec, HttpSessionInfoPtr co_i
             });
             if(ec)
             {
-                log_error_ext("loop_http_session failed, %1%", ec.message());
+                log_warning_ext("loop_http_session failed, %1%", ec.message());
                 return;
             }
 
@@ -280,7 +285,7 @@ void HttpTunnelServer::set_response(const StringRequest& req, http::status s, St
     res.content_length(0);
 }
 
-bool HttpTunnelServer::add_tunnel_session(InitSessionInfoPtr init_info)
+void HttpTunnelServer::add_tunnel_session(InitSessionInfoPtr init_info)
 {
     std::lock_guard<std::mutex> lk(m_mutex);
     auto session_it = m_sessions.find(init_info->session_id);
@@ -288,10 +293,8 @@ bool HttpTunnelServer::add_tunnel_session(InitSessionInfoPtr init_info)
     {
         //session_it->second->stop();
     }
-    HttpTunnelSessionPtr session = std::make_shared<HttpTunnelSession>(init_info->socket, init_info->session_id);
-    session->async_run
-    m_sessions[session_id] = session;
-    return true;
+    init_info->session = std::make_shared<HttpTunnelSession>(init_info->socket, init_info->session_id);
+    m_sessions[session_id] = init_info->session;
 }
 
 HttpTunnelSessionPtr HttpTunnelServer::find_session(const string& session_id)
@@ -300,7 +303,7 @@ HttpTunnelSessionPtr HttpTunnelServer::find_session(const string& session_id)
     auto session_it = m_sessions.find(session_id);
     if(session_it == m_sessions.end())
     {
-        LogError << "find_session,not find session:" << session_id;
+        log_error_ext("find_session,not find session:%1%", session_id);
         return nullptr;
     }
     return session_it->second;

@@ -15,6 +15,7 @@ struct InitSessionInfo
     boost::beast::flat_buffer buffer;
     StringRequest req;
     StringResponse res;
+    HttpTunnelSessionPtr session;
     InitSessionInfo(TcpSocket& s);
 };
 typedef shared_ptr<InitSessionInfo> InitSessionInfoPtr;

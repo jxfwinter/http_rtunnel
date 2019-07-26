@@ -214,7 +214,7 @@ void HttpTunnelSession::loop_recv(BSErrorCode ec)
             });
             if(ec)
             {
-                LogErrorExt << ec.message();
+                log_error_ext(ec.message());
                 m_socket.shutdown(tcp::socket::shutdown_both, ec);
                 m_socket.close(ec);
                 m_wait_send_timer.cancel(ec);
@@ -224,7 +224,7 @@ void HttpTunnelSession::loop_recv(BSErrorCode ec)
             it = m_recv_res.find(TID);
             if(it == m_recv_res.end())
             {
-                LogError << "TID not exist";
+                log_error_ext("TID not exist");
                 continue;
             }
             callback_by_recv_response((*it).value().to_string(), std::move(m_recv_res));

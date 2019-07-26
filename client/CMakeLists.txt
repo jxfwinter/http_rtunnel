@@ -1,6 +1,6 @@
-project(http_rproxy_client)
+project(http_tunnel_client)
 cmake_minimum_required(VERSION 2.8)
-set(OUTDIR ${CMAKE_CURRENT_SOURCE_DIR}/../../bin)
+set(OUTDIR ${CMAKE_CURRENT_SOURCE_DIR}/../bin)
 
 #set(Boost_USE_STATIC_LIBS ON)
 #set(Boost_USE_MULTITHREADED ON)
@@ -9,7 +9,7 @@ set(OUTDIR ${CMAKE_CURRENT_SOURCE_DIR}/../../bin)
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../server/fiber_kit/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../fiber_kit/include)
 
 aux_source_directory(./ SRC_LIST)
 
