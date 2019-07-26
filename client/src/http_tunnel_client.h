@@ -1,5 +1,5 @@
-#ifndef CLIENT_HTTP_TUNNEL_H
-#define CLIENT_HTTP_TUNNEL_H
+#ifndef HTTP_TUNNEL_CLIENT_H
+#define HTTP_TUNNEL_CLIENT_H
 
 #define SESSION_ID "JR-SID"
 #define TID "TID-J"
@@ -52,11 +52,11 @@ enum SOCKET_STATUS {
 //连接状态回调
 typedef std::function<void (SOCKET_STATUS)> ConnectCallback;
 
-class HttpTunnel
+class HttpTunnelClient
 {
 public:
-    HttpTunnel(IoContext& ioc);
-    ~HttpTunnel();
+    HttpTunnelClient(IoContext& ioc);
+    ~HttpTunnelClient();
 
     void set_transmit_local_address(string local_ip, uint16_t local_port) {
         m_local_ip = std::move(local_ip);
@@ -124,4 +124,4 @@ private:
     list<StrResponse> m_send_response_queue;
 };
 
-#endif // CLIENT_HTTP_TUNNEL_H
+#endif // HTTP_TUNNEL_CLIENT_H

@@ -7,7 +7,8 @@
 #include <map>
 #include <chrono>
 #include <thread>
-#include "request_api_server.h"
+#include <boost/beast.hpp>
+#include <boost/asio.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/date_time.hpp>
 #include <boost/uuid/uuid_generators.hpp>
@@ -25,7 +26,6 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
-#include <boost/fiber/all.hpp>
 #include "logger.h"
 
 using namespace std;
@@ -42,9 +42,12 @@ typedef boost::asio::ip::tcp::socket TcpSocket;
 typedef boost::asio::coroutine Coroutine;
 typedef boost::asio::ip::tcp::resolver Resolver;
 typedef boost::asio::ip::tcp::resolver::results_type ResolverResult;
+typedef boost::asio::deadline_timer DTimer;
 
-typedef std::lock_guard<boost::fibers::mutex> fiber_lock;
-
+typedef boost::system::error_code BSErrorCode;
+namespace http = boost::beast::http;
+typedef http::request<http::string_body> StringRequest;
+typedef http::response<http::string_body> StringResponse;
 
 #define SESSION_ID "JR-SID"
 #define TID "TID-J"

@@ -1,5 +1,5 @@
 #include "kconfig.h"
-#include "manager.h"
+#include "http_tunnel_server.h"
 #include "fiber_frame_context.hpp"
 #include <iostream>
 
@@ -19,7 +19,7 @@ int main(int argc,char ** argv)
         frame_cxt.init();
         init_logging(params.log_path, params.log_level);
 
-        Manager mgr;
+        HttpTunnelServer mgr;
         mgr.start();
 
         frame_cxt.wait();

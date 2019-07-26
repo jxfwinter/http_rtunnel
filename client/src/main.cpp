@@ -1,4 +1,4 @@
-#include "http_tunnel.h"
+#include "http_tunnel_client.h"
 #include <iostream>
 using namespace std;
 #include <boost/lexical_cast.hpp>
@@ -20,7 +20,7 @@ int main(int argc,char ** argv)
     int local_port = boost::lexical_cast<int>(string(argv[4]));
 
     IoContext ioc;
-    HttpTunnel ht(ioc);
+    HttpTunnelClient ht(ioc);
     ht.set_transmit_local_address("127.0.0.1", local_port);
     ht.set_conn_cb([](SOCKET_STATUS s){
         cout << (int)s << endl;

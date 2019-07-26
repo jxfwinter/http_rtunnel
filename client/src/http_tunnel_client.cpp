@@ -1,4 +1,4 @@
-#include "http_tunnel.h"
+#include "http_tunnel_client.h"
 #include <ctime>
 #include <chrono>
 #include <boost/asio/read.hpp>
@@ -48,18 +48,18 @@ static void set_socket_opt(TcpSocket& socket)
     }
 }
 
-HttpTunnel::HttpTunnel(IoContext& ioc) :
+HttpTunnelClient::HttpTunnelClient(IoContext& ioc) :
     m_ioc(ioc), m_timer(m_ioc), m_socket(m_ioc)
 {
 
 }
 
-HttpTunnel::~HttpTunnel()
+HttpTunnelClient::~HttpTunnelClient()
 {
 
 }
 
-void HttpTunnel::start(string host, uint16_t port, string session_id)
+void HttpTunnelClient::start(string host, uint16_t port, string session_id)
 {
     m_send_response_queue.clear();
     m_host = std::move(host);
@@ -72,20 +72,20 @@ void HttpTunnel::start(string host, uint16_t port, string session_id)
     start_check_timer();
 }
 
-void HttpTunnel::stop()
+void HttpTunnelClient::stop()
 {
     m_send_response_queue.clear();
     stop_check_timer();
 }
 
-void HttpTunnel::start_resolve_co()
+void HttpTunnelClient::start_resolve_co()
 {
     m_resolve_co = Coroutine();
     m_resolver.reset(new Resolver(m_ioc));
     loop_resolve({}, {});
 }
 
-void HttpTunnel::start_conn_co()
+void HttpTunnelClient::start_conn_co()
 {
     m_conn_co = Coroutine();
     if(m_socket.is_open())
@@ -96,13 +96,13 @@ void HttpTunnel::start_conn_co()
     loop_conn({});
 }
 
-void HttpTunnel::start_recv_co()
+void HttpTunnelClient::start_recv_co()
 {
     m_recv_co = Coroutine();
     loop_recv({});
 }
 
-void HttpTunnel::start_http_co(string id, StrRequest& req)
+void HttpTunnelClient::start_http_co(string id, StrRequest& req)
 {
     HttpCoInfoPtr co_info(new HttpCoInfo(m_ioc));
     co_info->id = std::move(id);
@@ -111,7 +111,7 @@ void HttpTunnel::start_http_co(string id, StrRequest& req)
     loop_http({}, std::move(co_info));
 }
 
-void HttpTunnel::start_send_co(HttpCoInfoPtr co_info)
+void HttpTunnelClient::start_send_co(HttpCoInfoPtr co_info)
 {
     //r表示响应
     bool write_in_progress = !m_send_response_queue.empty();
@@ -123,19 +123,19 @@ void HttpTunnel::start_send_co(HttpCoInfoPtr co_info)
     }
 }
 
-void HttpTunnel::start_check_timer()
+void HttpTunnelClient::start_check_timer()
 {
     m_timer_co = Coroutine();
     loop_check({});
 }
 
-void HttpTunnel::stop_check_timer()
+void HttpTunnelClient::stop_check_timer()
 {
     m_timer.cancel();
 }
 
 #include <boost/asio/yield.hpp>
-void HttpTunnel::loop_resolve(boost::system::error_code ec, ResolverResult r)
+void HttpTunnelClient::loop_resolve(boost::system::error_code ec, ResolverResult r)
 {
     reenter(m_resolve_co)
     {
@@ -155,7 +155,7 @@ void HttpTunnel::loop_resolve(boost::system::error_code ec, ResolverResult r)
     }
 }
 
-void HttpTunnel::loop_conn(boost::system::error_code ec)
+void HttpTunnelClient::loop_conn(boost::system::error_code ec)
 {
     reenter(m_conn_co)
     {
@@ -172,11 +172,11 @@ void HttpTunnel::loop_conn(boost::system::error_code ec)
         }
         set_socket_opt(m_socket);
         m_req = {};
-        m_req.method(http::verb::post);
+        m_req.method(http::verb::connect);
         m_req.keep_alive(true);
         m_req.set(SESSION_ID, m_session_id);
-        m_req.target("/setup_rproxy");
-        m_req.content_length(m_req.body().size());
+        m_req.target("setup.tunnel");
+        m_req.content_length(0);
         KK_PRT("start setup");
         yield http::async_write(m_socket, m_req, [this](boost::system::error_code ec, size_t) {
             this->loop_conn(ec);
@@ -218,7 +218,7 @@ void HttpTunnel::loop_conn(boost::system::error_code ec)
     }
 }
 
-void HttpTunnel::loop_recv(boost::system::error_code ec)
+void HttpTunnelClient::loop_recv(boost::system::error_code ec)
 {
     reenter(m_recv_co)
     {
@@ -259,7 +259,7 @@ void HttpTunnel::loop_recv(boost::system::error_code ec)
     }
 }
 
-void HttpTunnel::loop_http(boost::system::error_code ec, HttpCoInfoPtr co_info)
+void HttpTunnelClient::loop_http(boost::system::error_code ec, HttpCoInfoPtr co_info)
 {
     reenter(co_info->http_co)
     {
@@ -306,7 +306,7 @@ void HttpTunnel::loop_http(boost::system::error_code ec, HttpCoInfoPtr co_info)
     }
 }
 
-void HttpTunnel::loop_send(boost::system::error_code ec)
+void HttpTunnelClient::loop_send(boost::system::error_code ec)
 {
     reenter(m_send_co)
     {
@@ -342,7 +342,7 @@ void HttpTunnel::loop_send(boost::system::error_code ec)
     }
 }
 
-void HttpTunnel::loop_check(boost::system::error_code ec)
+void HttpTunnelClient::loop_check(boost::system::error_code ec)
 {
     reenter(m_timer_co)
     {
