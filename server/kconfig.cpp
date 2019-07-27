@@ -31,7 +31,14 @@ bool init_params(int argc, char** argv, ConfigParams& params)
         config_file_options.add_options()
                 ("http_listen_addr", po::value<string>(), "http listen address")
                 ("http_listen_port", po::value<uint16_t>(), "http listen port")
-                ("http_thread_pool", po::value<uint16_t>(), "http thread pool")
+
+                ("https_listen_addr", po::value<string>(), "https listen address")
+                ("https_listen_port", po::value<uint16_t>(), "https listen port")
+
+                ("ssl_certificate", po::value<string>(), "ssl certificate filename")
+                ("ssl_certificate_key", po::value<string>(), "ssl certificate key filename")
+
+                ("thread_pool", po::value<uint16_t>(), "thread pool")
 
                 ("req_timeout_secs", po::value<uint16_t>(), "request timeout seconds")
                 ("log_path", po::value<string>(), "log file path")
@@ -61,7 +68,12 @@ bool init_params(int argc, char** argv, ConfigParams& params)
 
         params.http_listen_addr = vm["http_listen_addr"].as<string>();
         params.http_listen_port = vm["http_listen_port"].as<uint16_t>();
-        params.http_thread_pool = vm["http_thread_pool"].as<uint16_t>();
+        params.https_listen_addr = vm["https_listen_addr"].as<string>();
+        params.https_listen_port = vm["https_listen_port"].as<uint16_t>();
+        params.ssl_certificate = vm["ssl_certificate"].as<string>();
+        params.ssl_certificate_key = vm["ssl_certificate_key"].as<string>();
+
+        params.thread_pool = vm["thread_pool"].as<uint16_t>();
 
         params.req_timeout_secs = vm["req_timeout_secs"].as<uint16_t>();
 

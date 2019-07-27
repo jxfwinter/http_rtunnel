@@ -141,6 +141,7 @@ void HttpTunnelServer::loop_init_session(BSErrorCode ec, InitSessionInfoPtr co_i
             log_warning_ext("loop_init_session failed, %1%", ec.message());
             return;
         }
+        LogDebug << co_info->req;
         if(co_info->req.method() == http::verb::connect)
         {
             //为建立隧道请求
@@ -161,6 +162,7 @@ void HttpTunnelServer::loop_init_session(BSErrorCode ec, InitSessionInfoPtr co_i
                 yield http::async_write(co_info->socket, co_info->res, [co_info, this](const BSErrorCode& ec, std::size_t) {
                     this->loop_init_session(ec, co_info);
                 });
+                LogDebug << co_info->res;
                 return;
             }
 
@@ -173,17 +175,18 @@ void HttpTunnelServer::loop_init_session(BSErrorCode ec, InitSessionInfoPtr co_i
             yield http::async_write(co_info->socket, co_info->res, [co_info, this](const BSErrorCode& ec, std::size_t) {
                 this->loop_init_session(ec, co_info);
             });
+            LogDebug << co_info->res;
             if(ec)
             {
                 log_warning_ext("loop_init_session failed, %1%", ec.message());
                 return;
             }
             add_tunnel_session(co_info);
-            yield co_info->session->async_run([this, co_info](BSErrorCode ec) {
+            yield co_info->session.lock()->async_run([this, co_info](BSErrorCode ec) {
                 this->loop_init_session(ec, co_info);
             });
             log_warning_ext("remove tunnel, err:%1%, session id:%2%", ec.message(), co_info->session_id);
-            remove_tunnel_session(co_info->session_id, co_info->session);
+            remove_tunnel_session(co_info->session_id, co_info->session.lock());
         }
         else
         {
@@ -215,6 +218,7 @@ void HttpTunnelServer::loop_http_session(BSErrorCode ec, HttpSessionInfoPtr co_i
                 yield http::async_write(co_info->socket, co_info->res, [co_info, this](const BSErrorCode& ec, std::size_t) {
                     this->loop_http_session(ec, co_info);
                 });
+                LogDebug << co_info->res;
                 return;
             }
             co_info->session = find_session(co_info->session_id);
@@ -224,6 +228,7 @@ void HttpTunnelServer::loop_http_session(BSErrorCode ec, HttpSessionInfoPtr co_i
                 yield http::async_write(co_info->socket, co_info->res, [co_info, this](const BSErrorCode& ec, std::size_t) {
                     this->loop_http_session(ec, co_info);
                 });
+                LogDebug << co_info->res;
                 if(ec)
                 {
                     log_warning_ext(ec.message());
@@ -248,7 +253,7 @@ void HttpTunnelServer::loop_http_session(BSErrorCode ec, HttpSessionInfoPtr co_i
                 yield http::async_write(co_info->socket, co_info->res, [co_info, this](const BSErrorCode& ec, std::size_t) {
                     this->loop_http_session(ec, co_info);
                 });
-
+                LogDebug << co_info->res;
                 if(ec)
                 {
                     log_error_ext(ec.message());
@@ -271,7 +276,7 @@ void HttpTunnelServer::loop_http_session(BSErrorCode ec, HttpSessionInfoPtr co_i
                 log_warning_ext("loop_http_session failed, %1%", ec.message());
                 return;
             }
-
+            LogDebug << co_info->req;
         } while(1);
     }
 }
@@ -293,10 +298,12 @@ void HttpTunnelServer::add_tunnel_session(InitSessionInfoPtr init_info)
     auto session_it = m_sessions.find(init_info->session_id);
     if(session_it != m_sessions.end())
     {
-        //session_it->second->stop();
+        log_warning("already has session:%1%", init_info->session_id);
+        session_it->second->cancel();
     }
-    init_info->session = std::make_shared<HttpTunnelSession>(init_info->socket, init_info->session_id);
-    m_sessions[init_info->session_id] = init_info->session;
+    auto session = std::make_shared<HttpTunnelSession>(init_info->socket, init_info->session_id);
+    init_info->session = session;
+    m_sessions[init_info->session_id] = session;
 }
 
 HttpTunnelSessionPtr HttpTunnelServer::find_session(const string& session_id)

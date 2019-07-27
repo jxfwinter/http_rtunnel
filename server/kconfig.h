@@ -57,7 +57,14 @@ struct ConfigParams
 {
     string http_listen_addr = "0.0.0.0";
     uint16_t http_listen_port = 3080;
-    uint16_t http_thread_pool = 3;
+
+    string https_listen_addr = "0.0.0.0";
+    uint16_t https_listen_port = 3443;
+
+    string ssl_certificate;
+    string ssl_certificate_key;
+
+    uint16_t thread_pool = 3;
 
     string tunnel_listen_addr = "0.0.0.0";
     uint16_t tunnel_listen_port = 3081;

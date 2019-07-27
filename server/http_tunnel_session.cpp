@@ -9,12 +9,14 @@ TMsgContext::TMsgContext(boost::asio::executor ex) : timer(ex)
 HttpTunnelSession::HttpTunnelSession(TcpSocket &s, const string &session_id) :
     m_socket(std::move(s)), m_session_id(session_id), m_wait_send_timer(m_socket.get_executor())
 {
-
+    BSErrorCode ec;
+    m_remote_ep = m_socket.remote_endpoint(ec);
+    log_debug("HttpTunnelSession create, session_id:%1%, ep:%2%", m_session_id, m_remote_ep);
 }
 
 HttpTunnelSession::~HttpTunnelSession()
 {
-    LogDebug << "~HttpTunnelSession, session_id:" << m_session_id;
+    log_debug("~HttpTunnelSession, session_id:%1%, ep:%2%", m_session_id, m_remote_ep);
 }
 
 void HttpTunnelSession::async_run(RunCallback&& cb)
@@ -22,6 +24,15 @@ void HttpTunnelSession::async_run(RunCallback&& cb)
     m_cb = std::move(cb);
     loop_send({});
     loop_recv({});
+}
+
+void HttpTunnelSession::cancel()
+{
+    log_warning("session:%1%,ep:%2% cancel", m_session_id, m_remote_ep);
+    BSErrorCode ec;
+    m_socket.shutdown(tcp::socket::shutdown_both, ec);
+    m_socket.close(ec);
+    m_wait_send_timer.cancel(ec);
 }
 
 void HttpTunnelSession::async_request(StringRequest req, int timeout, RequestCallback&& cb)
@@ -37,7 +48,6 @@ void HttpTunnelSession::async_request(StringRequest req, int timeout, RequestCal
     }
 
     req.set(TID, tid);
-    LogDebug << "tid:" << tid;
     TMsgContextPtr tmsg_cxt = std::make_shared<TMsgContext>(m_socket.get_executor());
     tmsg_cxt->req = std::move(req);
     tmsg_cxt->cb = std::move(cb);
@@ -99,7 +109,14 @@ void HttpTunnelSession::callback_by_timeout(const string& tid)
     {
         TMsgContext& cxt = *ptr;
         cxt.res.result(http::status::request_timeout);
+        cxt.res.version(cxt.req.version());
+        cxt.res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+        cxt.res.keep_alive(cxt.req.keep_alive());
         cxt.cb(std::move(cxt.res));
+    }
+    else
+    {
+        log_warning_ext("can not find tid:%1%", tid);
     }
 }
 
@@ -124,7 +141,14 @@ void HttpTunnelSession::callback_by_error(const string& tid, BSErrorCode ec)
         BSErrorCode ec;
         cxt.timer.cancel(ec);
         cxt.res.result(http::status::connection_closed_without_response);
+        cxt.res.version(cxt.req.version());
+        cxt.res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+        cxt.res.keep_alive(cxt.req.keep_alive());
         cxt.cb(std::move(cxt.res));
+    }
+    else
+    {
+        log_warning_ext("can not find tid:%1%", tid);
     }
 }
 
@@ -151,6 +175,10 @@ void HttpTunnelSession::callback_by_recv_response(const string& tid, StringRespo
         cxt.res = std::move(res);
         cxt.cb(std::move(cxt.res));
     }
+    else
+    {
+        log_warning_ext("can not find tid:%1%", tid);
+    }
 }
 
 #include <boost/asio/yield.hpp>
@@ -164,7 +192,7 @@ void HttpTunnelSession::loop_send(BSErrorCode ec)
         {
             m_wait_send_timer.expires_from_now(boost::posix_time::seconds(10));
             yield m_wait_send_timer.async_wait([self, this](BSErrorCode ec) {
-                this->loop_send(ec);
+                    this->loop_send(ec);
             });
             if(!ec)
             {
@@ -172,10 +200,13 @@ void HttpTunnelSession::loop_send(BSErrorCode ec)
             }
             if(ec != boost::asio::error::operation_aborted)
             {
+                log_debug("session:%1%,ep:%2% err:%3%", m_session_id, m_remote_ep, ec.message());
                 return;
             }
+            log_debug("session:%1%,ep:%2% wait send timer aborted", m_session_id, m_remote_ep);
             if(!m_socket.is_open())
             {
+                log_debug("session:%1%,ep:%2% socket is closed", m_session_id, m_remote_ep);
                 return;
             }
 
@@ -187,6 +218,7 @@ void HttpTunnelSession::loop_send(BSErrorCode ec)
                     break;
                 }
                 m_cur_send_tid = msg_cxt->tid;
+                log_debug("tunnel send req:\n%1%", msg_cxt->req);
                 yield http::async_write(m_socket, msg_cxt->req, [self, this](BSErrorCode ec, size_t) {
                     this->loop_send(ec);
                 });
@@ -221,6 +253,7 @@ void HttpTunnelSession::loop_recv(BSErrorCode ec)
                 m_cb(ec);
                 return;
             }
+            log_debug("tunnel recv res:\n%1%", m_recv_res);
             it = m_recv_res.find(TID);
             if(it == m_recv_res.end())
             {

@@ -32,6 +32,7 @@ public:
     ~HttpTunnelSession();
 
     void async_run(RunCallback&& cb);
+    void cancel();
 
     void async_request(StringRequest req, int timeout, RequestCallback&& cb);
 
@@ -50,6 +51,7 @@ private:
 
 private:
     TcpSocket m_socket;
+    Endpoint m_remote_ep;
     string m_session_id;
 
     vector<TMsgContextPtr> m_all_req_cxt;

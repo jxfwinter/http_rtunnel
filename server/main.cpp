@@ -12,14 +12,15 @@ int main(int argc,char ** argv)
     }
 
     init_logging(g_cfg->log_path, g_cfg->log_level, true);
+    LogDebug << "start server";
     IoContext ioc;
 
     HttpTunnelServer server(ioc, g_cfg->http_listen_addr, g_cfg->http_listen_port);
     server.start();
 
     std::vector<std::thread> v;
-    v.reserve(g_cfg->http_thread_pool - 1);
-    for(auto i = g_cfg->http_thread_pool - 1; i > 0; --i)
+    v.reserve(g_cfg->thread_pool - 1);
+    for(auto i = g_cfg->thread_pool - 1; i > 0; --i)
     {
         v.emplace_back([&ioc]{
             ioc.run();

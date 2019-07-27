@@ -6,6 +6,7 @@
 class HttpTunnelSession;
 
 typedef std::shared_ptr<HttpTunnelSession> HttpTunnelSessionPtr;
+typedef std::weak_ptr<HttpTunnelSession> HttpTunnelSessionWeakPtr;
 
 struct InitSessionInfo
 {
@@ -15,7 +16,7 @@ struct InitSessionInfo
     boost::beast::flat_buffer buffer;
     StringRequest req;
     StringResponse res;
-    HttpTunnelSessionPtr session;
+    HttpTunnelSessionWeakPtr session;
     InitSessionInfo(TcpSocket& s);
 };
 typedef std::shared_ptr<InitSessionInfo> InitSessionInfoPtr;

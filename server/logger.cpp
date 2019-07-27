@@ -224,11 +224,15 @@ void init_logging(const std::string &log_path, logging::trivial::severity_level 
 {
     logging::add_common_attributes();
     
+    boost::filesystem::path path_log_filename(log_path);
+    boost::filesystem::path parent_path = path_log_filename.parent_path();
+    boost::filesystem::path stem = path_log_filename.stem();
+    boost::filesystem::path extension_name = path_log_filename.extension();
     auto core = logging::core::get();
     boost::shared_ptr<sinks::text_file_backend> file_backend = boost::make_shared<sinks::text_file_backend>(
-                keywords::file_name = log_path
-             //   keywords::rotation_size = 50 * 1024 * 1024
-            //keywords::time_based_rotation = sinks::file::rotation_at_time_point(0,0,0)
+                keywords::file_name = parent_path.string() + "/" + stem.string() + "_%6N" + extension_name.string(),
+                keywords::rotation_size = 50 * 1024 * 1024
+               //keywords::time_based_rotation = sinks::file::rotation_at_time_point(0,0,0)
             );
 #ifndef KLOGGER_FORBIDDEN_AUTO_FLUSH
     //写入日志文件的默认使用 auto_flush，防止日志丢失, false会缓冲
@@ -238,11 +242,11 @@ void init_logging(const std::string &log_path, logging::trivial::severity_level 
 #endif
 
     boost::shared_ptr<FileSink> file_sink = boost::make_shared<FileSink>(file_backend);
-//    file_sink->locked_backend()->set_file_collector(
-//                sinks::file::make_collector(
-//                    keywords::target = parentPath.string(),
-//                    keywords::max_size = (uintmax_t)5 * 1024 * 1024 * 1024,
-//                    keywords::min_free_space = 100 * 1024 * 1024));
+    file_sink->locked_backend()->set_file_collector(
+                sinks::file::make_collector(
+                    keywords::target = parent_path.string(),
+                    keywords::max_size = (uintmax_t)5 * 1024 * 1024 * 1024,
+                    keywords::min_free_space = 100 * 1024 * 1024));
     core->add_sink(file_sink);
 
     file_sink->set_filter(expr::attr<logging::trivial::severity_level>("Severity") >= filter_level);
@@ -251,7 +255,7 @@ void init_logging(const std::string &log_path, logging::trivial::severity_level 
                 << "[" << expr::format_date_time<boost::posix_time::ptime>("TimeStamp", "%Y-%m-%d %H:%M:%S.%f") << "]"
                 << "[" << expr::attr<logging::trivial::severity_level>("Severity") << "]"
                 << " " << expr::message);
-    //file_sink->locked_backend()->scan_for_files();
+    file_sink->locked_backend()->scan_for_files();
 
     //输出控制台
     if(console)
