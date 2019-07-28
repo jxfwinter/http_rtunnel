@@ -265,6 +265,7 @@ void HttpTunnelSession::loop_recv(BSErrorCode ec)
                 log_error_ext("session:%1%,ep:%2% TID not exist", m_session_id, m_remote_ep);
                 continue;
             }
+            m_recv_res.set(SESSION_ID, m_session_id);
             callback_by_recv_response((*it).value().to_string(), std::move(m_recv_res));
         }
     }
