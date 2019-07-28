@@ -3,3 +3,4 @@
 /http_rtunnel.creator.user
 /client/build
 /server/build
+*.log

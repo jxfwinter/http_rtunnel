@@ -2,6 +2,7 @@ client/CMakeLists.txt
 client/http_tunnel_client.cpp
 client/http_tunnel_client.h
 client/main.cpp
+client/main_multi.cpp
 client/src/CMakeLists.txt
 client/src/http_tunnel_client.cpp
 client/src/http_tunnel_client.h

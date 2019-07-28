@@ -190,11 +190,12 @@ void HttpTunnelSession::loop_send(BSErrorCode ec)
     {
         for(;;)
         {
+            //log_debug("session:%1%,ep:%2% wait send timer start", m_session_id, m_remote_ep);
             m_wait_send_timer.expires_from_now(boost::posix_time::seconds(10));
             yield m_wait_send_timer.async_wait([self, this](BSErrorCode ec) {
                     this->loop_send(ec);
             });
-            if(!ec)
+            if(!ec && m_socket.is_open())
             {
                 continue;
             }
@@ -203,7 +204,11 @@ void HttpTunnelSession::loop_send(BSErrorCode ec)
                 log_debug("session:%1%,ep:%2% err:%3%", m_session_id, m_remote_ep, ec.message());
                 return;
             }
-            log_debug("session:%1%,ep:%2% wait send timer aborted", m_session_id, m_remote_ep);
+            else if(ec == boost::asio::error::operation_aborted) //表示有消息需要发送
+            {
+                log_debug("session:%1%,ep:%2% wait send timer aborted", m_session_id, m_remote_ep);
+            }
+
             if(!m_socket.is_open())
             {
                 log_debug("session:%1%,ep:%2% socket is closed", m_session_id, m_remote_ep);
@@ -246,18 +251,18 @@ void HttpTunnelSession::loop_recv(BSErrorCode ec)
             });
             if(ec)
             {
-                log_error_ext(ec.message());
+                log_error_ext("session:%1%,ep:%2% err:%3%", m_session_id, m_remote_ep, ec.message());
                 m_socket.shutdown(tcp::socket::shutdown_both, ec);
                 m_socket.close(ec);
                 m_wait_send_timer.cancel(ec);
                 m_cb(ec);
                 return;
             }
-            log_debug("tunnel recv res:\n%1%", m_recv_res);
+            log_debug("session:%1%,ep:%2% tunnel recv res:\n%3%", m_session_id, m_remote_ep, m_recv_res);
             it = m_recv_res.find(TID);
             if(it == m_recv_res.end())
             {
-                log_error_ext("TID not exist");
+                log_error_ext("session:%1%,ep:%2% TID not exist", m_session_id, m_remote_ep);
                 continue;
             }
             callback_by_recv_response((*it).value().to_string(), std::move(m_recv_res));
