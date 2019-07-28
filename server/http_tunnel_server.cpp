@@ -182,9 +182,18 @@ void HttpTunnelServer::loop_init_session(BSErrorCode ec, InitSessionInfoPtr co_i
                 return;
             }
             add_tunnel_session(co_info);
-            yield co_info->session.lock()->async_run([this, co_info](BSErrorCode ec) {
-                this->loop_init_session(ec, co_info);
-            });
+            yield
+            {
+                auto session = co_info->session.lock();
+                if(!session)
+                {
+                    log_error_ext("lock to shared_ptr failed");
+                    return;
+                }
+                session->async_run([this, co_info](BSErrorCode ec) {
+                    this->loop_init_session(ec, co_info);
+                });
+            }
             log_warning_ext("remove tunnel, err:%1%, session id:%2%", ec.message(), co_info->session_id);
             remove_tunnel_session(co_info->session_id, co_info->session.lock());
         }

@@ -269,7 +269,7 @@ void HttpTunnelClient::loop_http(boost::system::error_code ec, HttpCoInfoPtr co_
         if(ec)
         {
             KK_PRT("error:%d,%s", ec.value(), ec.message().c_str());
-            co_info->res.result(http::status::connection_closed_without_response);
+            co_info->res.result(http::status::service_unavailable);
             co_info->res.set(TID, co_info->id);
             start_send_co(co_info);
             yield break;
@@ -284,7 +284,7 @@ void HttpTunnelClient::loop_http(boost::system::error_code ec, HttpCoInfoPtr co_
         if(ec)
         {
             KK_PRT("error:%d,%s", ec.value(), ec.message().c_str());
-            co_info->res.result(http::status::connection_closed_without_response);
+            co_info->res.result(http::status::service_unavailable);
             co_info->res.set(TID, co_info->id);
             start_send_co(co_info);
             yield break;
@@ -295,7 +295,7 @@ void HttpTunnelClient::loop_http(boost::system::error_code ec, HttpCoInfoPtr co_
         if(ec)
         {
             KK_PRT("error:%d,%s", ec.value(), ec.message().c_str());
-            co_info->res.result(http::status::connection_closed_without_response);
+            co_info->res.result(http::status::service_unavailable);
             co_info->res.set(TID, co_info->id);
             start_send_co(co_info);
             yield break;

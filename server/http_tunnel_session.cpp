@@ -108,7 +108,7 @@ void HttpTunnelSession::callback_by_timeout(const string& tid)
     if(ptr)
     {
         TMsgContext& cxt = *ptr;
-        cxt.res.result(http::status::request_timeout);
+        cxt.res.result(http::status::gateway_timeout);
         cxt.res.version(cxt.req.version());
         cxt.res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
         cxt.res.keep_alive(cxt.req.keep_alive());
@@ -140,7 +140,7 @@ void HttpTunnelSession::callback_by_error(const string& tid, BSErrorCode ec)
         TMsgContext& cxt = *ptr;
         BSErrorCode ec;
         cxt.timer.cancel(ec);
-        cxt.res.result(http::status::connection_closed_without_response);
+        cxt.res.result(http::status::bad_gateway);
         cxt.res.version(cxt.req.version());
         cxt.res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
         cxt.res.keep_alive(cxt.req.keep_alive());

@@ -1,4 +1,5 @@
-/bin
+/bin/http_tunnel_client
+/bin/http_tunnel_server
 /http_rtunnel.creator.user
 /client/build
 /server/build
