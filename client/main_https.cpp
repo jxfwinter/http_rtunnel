@@ -44,16 +44,22 @@ int main(int argc,char ** argv)
         ht->start(host, port, session_id_tmp);
     }
 
+    typedef boost::asio::executor_work_guard<boost::asio::io_context::executor_type> io_context_work;
     std::vector<std::thread> v;
-    v.reserve(thread_pool - 1);
-    for(int i = 1; i < thread_pool; ++i)
+    v.reserve(thread_pool);
+    for(int i = 0; i < thread_pool; ++i)
     {
         auto& ioc = *ioc_pool[i];
         v.push_back(std::thread([&ioc] {
+            io_context_work ioc_worker = boost::asio::make_work_guard(ioc);
             ioc.run();
+            ioc_worker.reset();
         }));
     }
 
-    (*ioc_pool[0]).run();
+    for(auto& t : v)
+    {
+        t.join();
+    }
     return 0;
 }
