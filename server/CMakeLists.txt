@@ -23,7 +23,7 @@ add_executable(${PROJECT_NAME} ${SRC_LIST})
 set(KLink_LIBRARIES pthread dl crypto ssl)
 target_link_libraries(${PROJECT_NAME} -Wl,--start-group ${Boost_LIBRARIES} ${KLink_LIBRARIES} -Wl,--end-group)
 SET(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS_RELWITHDEBINFO})
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++2a")
 MESSAGE(STATUS "cxx flags is ${CMAKE_CXX_FLAGS}")
 
 

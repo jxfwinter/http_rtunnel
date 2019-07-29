@@ -25,6 +25,7 @@
 #include <boost/thread.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
+#include <boost/asio/ssl.hpp>
 
 #include "logger.h"
 
@@ -44,11 +45,13 @@ typedef boost::asio::ip::tcp::resolver Resolver;
 typedef boost::asio::ip::tcp::resolver::results_type ResolverResult;
 typedef boost::asio::deadline_timer DTimer;
 using namespace boost::asio::ip;
+typedef boost::asio::ssl::stream<TcpSocket> SslSocket;
 
 typedef boost::system::error_code BSErrorCode;
 namespace http = boost::beast::http;
 typedef http::request<http::string_body> StringRequest;
 typedef http::response<http::string_body> StringResponse;
+
 
 #define SESSION_ID "JR-SID"
 #define TID "TID-J"

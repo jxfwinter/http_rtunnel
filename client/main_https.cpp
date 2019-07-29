@@ -1,10 +1,11 @@
-#include "http_tunnel_client.h"
+#include "https_tunnel_client.h"
 #include <iostream>
 #include <vector>
 #include <thread>
 using namespace std;
 #include <boost/lexical_cast.hpp>
 
+typedef std::shared_ptr<IoContext> IoContextPtr;
 int main(int argc,char ** argv)
 {
     if(argc != 6)
@@ -23,12 +24,18 @@ int main(int argc,char ** argv)
     int count = boost::lexical_cast<int>(string(argv[5]));
 
     int thread_pool = 3;
-    IoContext ioc{thread_pool};
+    std::vector<IoContextPtr> ioc_pool;
+    for(int i = 0; i < thread_pool; ++i)
+    {
+        IoContextPtr ioc_ptr(new IoContext());
+        ioc_pool.push_back(ioc_ptr);
+    }
 
     for(int i=1; i<=count; ++i)
     {
         string session_id_tmp = session_id + boost::lexical_cast<string>(i);
-        HttpTunnelClient* ht = new HttpTunnelClient(ioc);
+
+        HttpsTunnelClient* ht = new HttpsTunnelClient(*ioc_pool[i%thread_pool]);
         ht->set_transmit_local_address("127.0.0.1", local_port);
         ht->set_conn_cb([session_id_tmp](SOCKET_STATUS s){
             cout << session_id_tmp << ":" << (int)s << endl;
@@ -39,13 +46,14 @@ int main(int argc,char ** argv)
 
     std::vector<std::thread> v;
     v.reserve(thread_pool - 1);
-    for(auto i = thread_pool - 1; i > 0; --i)
+    for(int i = 1; i < thread_pool; ++i)
     {
-        v.emplace_back([&ioc]{
+        auto& ioc = *ioc_pool[i];
+        v.push_back(std::thread([&ioc] {
             ioc.run();
-        });
+        }));
     }
 
-    ioc.run();
+    (*ioc_pool[0]).run();
     return 0;
 }

@@ -15,7 +15,7 @@ int main(int argc,char ** argv)
     LogDebug << "start server";
     IoContext ioc;
 
-    HttpTunnelServer server(ioc, g_cfg->http_listen_addr, g_cfg->http_listen_port);
+    HttpTunnelServer server(ioc);
     server.start();
 
     std::vector<std::thread> v;

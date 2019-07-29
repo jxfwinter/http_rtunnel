@@ -1,14 +1,14 @@
-#ifndef HTTP_TUNNEL_SESSION_H
-#define HTTP_TUNNEL_SESSION_H
+#ifndef HTTPS_TUNNEL_SESSION_H
+#define HTTPS_TUNNEL_SESSION_H
 
 #include "kconfig.h"
 #include "tunnel_session.h"
 
-class HttpTunnelSession : public TunnelSession
+class HttpsTunnelSession : public TunnelSession
 {
 public:
-    HttpTunnelSession(const string& session_id, TcpSocket &s);
-    virtual ~HttpTunnelSession();
+    HttpsTunnelSession(const string& session_id, std::shared_ptr<SslSocket> s);
+    virtual ~HttpsTunnelSession();
 
     void async_run(RunCallback&& cb) override;
     void cancel() override;
@@ -21,8 +21,9 @@ protected:
     void loop_recv(BSErrorCode ec);
 
 protected:
-    TcpSocket m_socket;
+    std::shared_ptr<SslSocket> m_socket_ptr;
+    SslSocket& m_socket;
     DTimer m_wait_send_timer;
 };
 
-#endif // HTTP_TUNNEL_SESSION_H
+#endif // HTTPS_TUNNEL_SESSION_H

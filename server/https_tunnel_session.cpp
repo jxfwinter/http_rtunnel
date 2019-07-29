@@ -1,35 +1,35 @@
-#include "http_tunnel_session.h"
+#include "https_tunnel_session.h"
 
-HttpTunnelSession::HttpTunnelSession(const string &session_id, TcpSocket &s) :
-    TunnelSession(session_id), m_socket(std::move(s)), m_wait_send_timer(m_socket.get_executor())
+HttpsTunnelSession::HttpsTunnelSession(const string &session_id, std::shared_ptr<SslSocket> s) :
+    TunnelSession(session_id), m_socket_ptr(s), m_socket(*m_socket_ptr), m_wait_send_timer(m_socket.get_executor())
 {
     BSErrorCode ec;
-    m_remote_ep = m_socket.remote_endpoint(ec);
-    log_debug("HttpTunnelSession create, session_id:%1%, ep:%2%", m_session_id, m_remote_ep);
+    m_remote_ep = m_socket.next_layer().remote_endpoint(ec);
+    log_debug("HttpsTunnelSession create, session_id:%1%, ep:%2%", m_session_id, m_remote_ep);
 }
 
-HttpTunnelSession::~HttpTunnelSession()
+HttpsTunnelSession::~HttpsTunnelSession()
 {
-    log_debug("~HttpTunnelSession, session_id:%1%, ep:%2%", m_session_id, m_remote_ep);
+    log_debug("~HttpsTunnelSession, session_id:%1%, ep:%2%", m_session_id, m_remote_ep);
 }
 
-void HttpTunnelSession::async_run(RunCallback&& cb)
+void HttpsTunnelSession::async_run(RunCallback&& cb)
 {
     m_cb = std::move(cb);
     loop_send({});
     loop_recv({});
 }
 
-void HttpTunnelSession::cancel()
+void HttpsTunnelSession::cancel()
 {
     log_warning("session:%1%,ep:%2% cancel", m_session_id, m_remote_ep);
     BSErrorCode ec;
-    m_socket.shutdown(tcp::socket::shutdown_both, ec);
-    m_socket.close(ec);
+    m_socket.next_layer().shutdown(tcp::socket::shutdown_both, ec);
+    m_socket.next_layer().close(ec);
     m_wait_send_timer.cancel(ec);
 }
 
-void HttpTunnelSession::async_request(StringRequest req, int timeout, RequestCallback&& cb)
+void HttpsTunnelSession::async_request(StringRequest req, int timeout, RequestCallback&& cb)
 {
     auto self(shared_from_this());
     string tid;
@@ -69,7 +69,7 @@ void HttpTunnelSession::async_request(StringRequest req, int timeout, RequestCal
 }
 
 #include <boost/asio/yield.hpp>
-void HttpTunnelSession::loop_send(BSErrorCode ec)
+void HttpsTunnelSession::loop_send(BSErrorCode ec)
 {
     auto self(shared_from_this());
     TMsgContextPtr msg_cxt;
@@ -82,7 +82,7 @@ void HttpTunnelSession::loop_send(BSErrorCode ec)
             yield m_wait_send_timer.async_wait([self, this](BSErrorCode ec) {
                     this->loop_send(ec);
             });
-            if(!ec && m_socket.is_open())
+            if(!ec && m_socket.next_layer().is_open())
             {
                 continue;
             }
@@ -96,7 +96,7 @@ void HttpTunnelSession::loop_send(BSErrorCode ec)
                 log_debug("session:%1%,ep:%2% wait send timer aborted", m_session_id, m_remote_ep);
             }
 
-            if(!m_socket.is_open())
+            if(!m_socket.next_layer().is_open())
             {
                 log_debug("session:%1%,ep:%2% socket is closed", m_session_id, m_remote_ep);
                 return;
@@ -124,7 +124,7 @@ void HttpTunnelSession::loop_send(BSErrorCode ec)
     }
 }
 
-void HttpTunnelSession::loop_recv(BSErrorCode ec)
+void HttpsTunnelSession::loop_recv(BSErrorCode ec)
 {
     auto self(shared_from_this());
     StringResponse::const_iterator it;
@@ -139,8 +139,8 @@ void HttpTunnelSession::loop_recv(BSErrorCode ec)
             if(ec)
             {
                 log_error_ext("session:%1%,ep:%2% err:%3%", m_session_id, m_remote_ep, ec.message());
-                m_socket.shutdown(tcp::socket::shutdown_both, ec);
-                m_socket.close(ec);
+                m_socket.next_layer().shutdown(tcp::socket::shutdown_both, ec);
+                m_socket.next_layer().close(ec);
                 m_wait_send_timer.cancel(ec);
                 m_cb(ec);
                 return;

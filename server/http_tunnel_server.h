@@ -3,34 +3,38 @@
 
 #include "kconfig.h"
 
-class HttpTunnelSession;
+class TunnelSession;
 
-typedef std::shared_ptr<HttpTunnelSession> HttpTunnelSessionPtr;
-typedef std::weak_ptr<HttpTunnelSession> HttpTunnelSessionWeakPtr;
+typedef std::shared_ptr<TunnelSession> TunnelSessionPtr;
+typedef std::weak_ptr<TunnelSession> TunnelSessionWeakPtr;
 
 struct InitSessionInfo
 {
+    bool https = false;
     string session_id;
     Coroutine co;
     TcpSocket socket;
+    std::shared_ptr<SslSocket> ssl_socket;
     boost::beast::flat_buffer buffer;
     StringRequest req;
     StringResponse res;
-    HttpTunnelSessionWeakPtr session;
+    TunnelSessionWeakPtr session;
     InitSessionInfo(TcpSocket& s);
 };
 typedef std::shared_ptr<InitSessionInfo> InitSessionInfoPtr;
 
 struct HttpSessionInfo
 {
+    bool https = false;
     Coroutine co;
     TcpSocket socket;
+    std::shared_ptr<SslSocket> ssl_socket;
     boost::beast::flat_buffer buffer;
     StringRequest req;
     StringResponse res;
     string session_id;
     int timeout = 10;
-    HttpTunnelSessionPtr session;
+    TunnelSessionPtr session;
 
     HttpSessionInfo(TcpSocket& s);
 };
@@ -39,7 +43,7 @@ typedef std::shared_ptr<HttpSessionInfo> HttpSessionInfoPtr;
 class HttpTunnelServer
 {
 public:
-    HttpTunnelServer(IoContext& ioc, const string &listen_address, uint16_t listen_port);
+    HttpTunnelServer(IoContext& ioc);
     ~HttpTunnelServer();
 
     void start();
@@ -49,21 +53,21 @@ public:
     //添加session
     void add_tunnel_session(InitSessionInfoPtr init_info);
     //删除session
-    void remove_tunnel_session(const string& session_id, HttpTunnelSessionPtr session);
+    void remove_tunnel_session(const string& session_id, TunnelSessionPtr session);
 
-    HttpTunnelSessionPtr find_session(const string& session_id);
+    TunnelSessionPtr find_session(const string& session_id);
 
 private:
-    void accept();
-
-    void start_init_session(TcpSocket s);
+    void start_init_session(TcpSocket s, bool https);
 
     void start_http_session(InitSessionInfoPtr init_info);
 
     void set_response(const StringRequest& req, http::status s, StringResponse& res);
 
 private:
-    void loop_accept(BSErrorCode ec);
+    void loop_http_accept(BSErrorCode ec);
+
+    void loop_https_accept(BSErrorCode ec);
 
     void loop_init_session(BSErrorCode ec, InitSessionInfoPtr co_info);
 
@@ -72,15 +76,21 @@ private:
 
 private:
     IoContext& m_ioc;
-    Acceptor m_acceptor;
-    TcpSocket m_socket;
+    Acceptor m_http_acceptor;
+    Acceptor m_https_acceptor;
+    TcpSocket m_http_socket;
+    TcpSocket m_https_socket;
 
-    std::vector<std::thread> m_threads;
-    Endpoint m_listen_ep;
-    Coroutine m_accept_co;
+    boost::asio::ssl::context m_ssl_cxt;
+
+    Endpoint m_http_listen_ep;
+    Coroutine m_http_accept_co;
+
+    Endpoint m_https_listen_ep;
+    Coroutine m_https_accept_co;
 
     //key为session id
-    std::unordered_map<string, HttpTunnelSessionPtr> m_sessions;
+    std::unordered_map<string, TunnelSessionPtr> m_sessions;
     std::mutex m_mutex;
 };
 

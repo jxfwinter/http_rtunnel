@@ -1,8 +1,10 @@
 client/CMakeLists.txt
 client/http_tunnel_client.cpp
 client/http_tunnel_client.h
-client/main.cpp
-client/main_multi.cpp
+client/https_tunnel_client.cpp
+client/https_tunnel_client.h
+client/main_http.cpp
+client/main_https.cpp
 client/src/CMakeLists.txt
 client/src/http_tunnel_client.cpp
 client/src/http_tunnel_client.h
@@ -14,6 +16,8 @@ server/http_tunnel_server.cpp
 server/http_tunnel_server.h
 server/http_tunnel_session.cpp
 server/http_tunnel_session.h
+server/https_tunnel_session.cpp
+server/https_tunnel_session.h
 server/kconfig.cpp
 server/kconfig.h
 server/logger.cpp
@@ -27,3 +31,5 @@ server/src/http_tunnel_session.h
 server/src/kconfig.cpp
 server/src/kconfig.h
 server/src/main.cpp
+server/tunnel_session.cpp
+server/tunnel_session.h
