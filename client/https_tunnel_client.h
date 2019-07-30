@@ -16,6 +16,7 @@ using namespace std;
 typedef boost::asio::io_context IoContext;
 typedef boost::asio::ip::tcp::resolver Resolver;
 typedef boost::asio::ip::tcp::resolver::results_type ResolverResult;
+typedef boost::asio::ssl::context SslContext;
 
 typedef boost::asio::ip::tcp::endpoint Endpoint;
 typedef boost::asio::ip::tcp::socket TcpSocket;
@@ -57,7 +58,7 @@ typedef std::function<void (SOCKET_STATUS)> ConnectCallback;
 class HttpsTunnelClient
 {
 public:
-    HttpsTunnelClient(IoContext& ioc);
+    HttpsTunnelClient(IoContext& ioc, SslContext& ssl_cxt, bool verify);
     ~HttpsTunnelClient();
 
     void set_transmit_local_address(string local_ip, uint16_t local_port) {
@@ -94,7 +95,6 @@ private:
 
 private:
     IoContext& m_ioc;
-    boost::asio::ssl::context m_ssl_ctx;
     boost::asio::steady_timer m_timer;
     SslSocket m_socket;
     std::unique_ptr<Resolver> m_resolver;

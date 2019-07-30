@@ -8,6 +8,7 @@
 #include <chrono>
 #include <thread>
 #include <boost/beast.hpp>
+#include <boost/beast/ssl.hpp>
 #include <boost/asio.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/date_time.hpp>
@@ -46,6 +47,7 @@ typedef boost::asio::ip::tcp::resolver::results_type ResolverResult;
 typedef boost::asio::deadline_timer DTimer;
 using namespace boost::asio::ip;
 typedef boost::asio::ssl::stream<TcpSocket> SslSocket;
+//typedef boost::beast::ssl_stream<TcpSocket> SslSocket;
 
 typedef boost::system::error_code BSErrorCode;
 namespace http = boost::beast::http;

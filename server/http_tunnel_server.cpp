@@ -139,7 +139,7 @@ void HttpTunnelServer::start_http_session(InitSessionInfoPtr init_info)
     co_info->https = init_info->https;
     if(co_info->https)
     {
-        co_info->ssl_socket.reset(new SslSocket(std::move(co_info->socket), m_ssl_cxt));
+        co_info->ssl_socket = init_info->ssl_socket;
     }
     co_info->timeout = g_cfg->req_timeout_secs;
     co_info->req = std::move(init_info->req);
@@ -452,7 +452,7 @@ void HttpTunnelServer::loop_http_session(BSErrorCode ec, HttpSessionInfoPtr co_i
                 LogDebug << co_info->res;
                 if(ec)
                 {
-                    log_error_ext(ec.message());
+                    log_error_ext("%1%, err:%2%", ec.value(), ec.message());
                     return;
                 }
 

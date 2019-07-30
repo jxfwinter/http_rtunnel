@@ -48,11 +48,26 @@ static void set_socket_opt(TcpSocket& socket)
     }
 }
 
-HttpsTunnelClient::HttpsTunnelClient(IoContext& ioc) :
-    m_ioc(ioc), m_ssl_ctx(boost::asio::ssl::context::sslv23), m_timer(m_ioc), m_socket(m_ioc, m_ssl_ctx)
+HttpsTunnelClient::HttpsTunnelClient(IoContext& ioc, SslContext &ssl_cxt, bool verify) :
+    m_ioc(ioc), m_timer(m_ioc), m_socket(m_ioc, ssl_cxt)
 {
-    //不验证证书合法性,所以cxt不用调用load_verify_file add_verify_path或add_certificate_authority
-    m_socket.set_verify_mode(boost::asio::ssl::verify_none);
+    if(!verify)
+    {
+        //不验证证书合法性,所以cxt不用调用load_verify_file add_verify_path或add_certificate_authority
+        m_socket.set_verify_mode(boost::asio::ssl::verify_none);
+    }
+    else
+    {
+        m_socket.set_verify_mode(boost::asio::ssl::verify_peer);
+        m_socket.set_verify_callback([](bool preverified, boost::asio::ssl::verify_context& ctx) {
+            KK_PRT("preverified:%d", (int)preverified);
+            char subject_name[256];
+            X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
+            X509_NAME_oneline(X509_get_subject_name(cert), subject_name, 256);
+            KK_PRT("subject_name:%s", subject_name);
+            return preverified;
+        });
+    }
 }
 
 HttpsTunnelClient::~HttpsTunnelClient()
