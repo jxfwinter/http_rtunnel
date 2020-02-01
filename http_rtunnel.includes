@@ -1,8 +1,9 @@
 client/src
 server/src
-fiber_kit/include
 D:\msys64\usr\include
-D:\msys64\usr\lib\gcc\x86_64-pc-msys\7.4.0\include\c++
+D:\msys64\usr\lib\gcc\x86_64-pc-msys\9.1.0\include\c++
 server
 client
 config
+.
+include

@@ -1,0 +1,59 @@
+config("myconfig") {
+    include_dirs = [
+        "./include",
+    ]
+    lib_dirs = ["./lib"]
+}
+
+executable("http_tunnel_server") {
+    configs += [ ":myconfig" ]
+    configs -= [ "//build/config:c++11" ]
+    configs += [ "//build/config:c++17" ]
+
+    sources = [
+        "./server/main.cpp",
+        "./server/http_tunnel_server.h",
+        "./server/http_tunnel_server.cpp",
+        "./server/http_tunnel_session.h",
+        "./server/http_tunnel_session.cpp",
+        "./server/https_tunnel_session.h",
+        "./server/https_tunnel_session.cpp",
+        "./server/kconfig.cpp",
+        "./server/kconfig.h",
+        "./server/logger.cpp",
+        "./server/logger.h",
+        "./server/tunnel_session.cpp",
+        "./server/tunnel_session.h",
+        ]
+    libs = ["boost_date_time", "boost_filesystem", "boost_log_setup", "boost_thread", "boost_log",
+            "boost_program_options", "boost_regex", "pthread"]
+}
+
+executable("http_tunnel_client") {
+    configs += [ ":myconfig" ]
+    configs -= [ "//build/config:c++11" ]
+    configs += [ "//build/config:c++17" ]
+
+    sources = [
+        "./client/main_http.cpp",
+        "./server/http_tunnel_client.h",
+        "./server/http_tunnel_client.cpp",
+        ]
+    libs = ["pthread"]
+}
+
+executable("https_tunnel_client") {
+    configs += [ ":myconfig" ]
+    configs -= [ "//build/config:c++11" ]
+    configs += [ "//build/config:c++17" ]
+
+    sources = [
+        "./client/main_https.cpp",
+        "./server/https_tunnel_client.h",
+        "./server/https_tunnel_client.cpp",
+        ]
+    libs = ["pthread"]
+}
+
+
+

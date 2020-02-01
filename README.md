@@ -25,3 +25,7 @@ http反向隧道中间件，类似ssh反向隧道，但ssh反向隧道，一个�
 4 隧道支持并发http请求,一个隧道可同时传输多个http请求  
 5 中间件服务端支持http请求超时  
 6 隧道可选ssl加密  
+
+构建命令  
+gn gen out/release --args="is_debug=false"  
+ninja -C out/release  

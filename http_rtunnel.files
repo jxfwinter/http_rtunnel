@@ -1,4 +1,7 @@
-client/CMakeLists.txt
+.gitignore
+.gn
+BUILD.gn
+README.md
 client/http_tunnel_client.cpp
 client/http_tunnel_client.h
 client/https_tunnel_client.cpp
@@ -10,7 +13,6 @@ client/src/http_tunnel_client.cpp
 client/src/http_tunnel_client.h
 client/src/main.cpp
 config/http_rproxy.cfg
-server/CMakeLists.txt
 server/config/http_rproxy.cfg
 server/http_tunnel_server.cpp
 server/http_tunnel_server.h
