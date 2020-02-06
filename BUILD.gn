@@ -36,8 +36,8 @@ executable("http_tunnel_client") {
 
     sources = [
         "./client/main_http.cpp",
-        "./server/http_tunnel_client.h",
-        "./server/http_tunnel_client.cpp",
+        "./client/http_tunnel_client.h",
+        "./client/http_tunnel_client.cpp",
         ]
     libs = ["pthread"]
 }
@@ -49,8 +49,8 @@ executable("https_tunnel_client") {
 
     sources = [
         "./client/main_https.cpp",
-        "./server/https_tunnel_client.h",
-        "./server/https_tunnel_client.cpp",
+        "./client/https_tunnel_client.h",
+        "./client/https_tunnel_client.cpp",
         ]
     libs = ["pthread"]
 }
