@@ -3,12 +3,12 @@ config("myconfig") {
         "./include",
     ]
     lib_dirs = ["./lib"]
+    cflags_cc = [ "-std=c++2a" ]
 }
 
 executable("http_tunnel_server") {
     configs += [ ":myconfig" ]
     configs -= [ "//build/config:c++11" ]
-    configs += [ "//build/config:c++17" ]
 
     sources = [
         "./server/main.cpp",
@@ -25,14 +25,13 @@ executable("http_tunnel_server") {
         "./server/tunnel_session.cpp",
         "./server/tunnel_session.h",
         ]
-    libs = ["boost_date_time", "boost_filesystem", "boost_log_setup", "boost_thread", "boost_log",
-            "boost_program_options", "boost_regex", "pthread"]
+    libs = ["boost_log_setup", "boost_log", "boost_thread",  "boost_date_time", "boost_filesystem",
+            "boost_program_options", "boost_regex", "pthread", "ssl", "crypto"]
 }
 
 executable("http_tunnel_client") {
     configs += [ ":myconfig" ]
     configs -= [ "//build/config:c++11" ]
-    configs += [ "//build/config:c++17" ]
 
     sources = [
         "./client/main_http.cpp",
@@ -45,14 +44,13 @@ executable("http_tunnel_client") {
 executable("https_tunnel_client") {
     configs += [ ":myconfig" ]
     configs -= [ "//build/config:c++11" ]
-    configs += [ "//build/config:c++17" ]
 
     sources = [
         "./client/main_https.cpp",
         "./client/https_tunnel_client.h",
         "./client/https_tunnel_client.cpp",
         ]
-    libs = ["pthread"]
+    libs = ["pthread", "ssl", "crypto"]
 }
 
 
