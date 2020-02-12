@@ -57,12 +57,9 @@ int main(int argc,char ** argv)
         string session_id_tmp = session_id + boost::lexical_cast<string>(i);
 
         HttpsTunnelClient* ht = new HttpsTunnelClient(*ioc_pool[i%thread_pool], ssl_cxt, !verify_file.empty());
-        ht->set_transmit_local_address("127.0.0.1", local_port);
-        ht->set_conn_cb([session_id_tmp](SOCKET_STATUS s){
+        ht->async_run(host, port, session_id_tmp, "127.0.0.1", local_port, [session_id_tmp](SOCKET_STATUS s){
             cout << session_id_tmp << ":" << (int)s << endl;
         });
-
-        ht->start(host, port, session_id_tmp);
     }
 
     typedef boost::asio::executor_work_guard<boost::asio::io_context::executor_type> io_context_work;

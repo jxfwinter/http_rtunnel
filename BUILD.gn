@@ -37,6 +37,7 @@ executable("http_tunnel_client") {
         "./client/main_http.cpp",
         "./client/http_tunnel_client.h",
         "./client/http_tunnel_client.cpp",
+        "./client/pub.cpp",
         ]
     libs = ["pthread"]
 }
@@ -49,6 +50,7 @@ executable("https_tunnel_client") {
         "./client/main_https.cpp",
         "./client/https_tunnel_client.h",
         "./client/https_tunnel_client.cpp",
+        "./client/pub.cpp",
         ]
     libs = ["pthread", "ssl", "crypto"]
 }

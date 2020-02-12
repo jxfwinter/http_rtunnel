@@ -53,7 +53,7 @@ enum SOCKET_STATUS {
 };
 
 //连接状态回调
-typedef std::function<void (SOCKET_STATUS)> ConnectCallback;
+typedef std::function<void (SOCKET_STATUS)> ConnectStatusNotify;
 
 class HttpsTunnelClient
 {
@@ -61,68 +61,42 @@ public:
     HttpsTunnelClient(IoContext& ioc, SslContext& ssl_cxt, bool verify);
     ~HttpsTunnelClient();
 
-    void set_transmit_local_address(string local_ip, uint16_t local_port) {
-        m_local_ip = std::move(local_ip);
-        m_local_port = local_port;
-    }
-
-    void set_conn_cb(ConnectCallback cb) {
-        m_conn_cb = cb;
-    }
-
-    void start(string host, uint16_t port, string session_id);
-    void stop();
+    void async_run(string host, uint16_t port, string session_id,
+                   string local_ip, uint16_t local_port,
+                   ConnectStatusNotify cb);
 
 private:
-    void start_resolve_co();
+    void loop_run(boost::system::error_code ec);
+    void start_http_co(string id, StrRequest& req);
 
-    void start_conn_co();
-    void start_recv_co();
     void start_send_co(HttpCoInfoPtr co_info);
-
-    void start_http_co(string id, StrRequest &req);
-
-    void start_check_timer();
-    void stop_check_timer();
-
-    void loop_resolve(boost::system::error_code ec, ResolverResult r);
-    void loop_conn(boost::system::error_code ec);
-    void loop_recv(boost::system::error_code ec);
     void loop_http(boost::system::error_code ec, HttpCoInfoPtr co_info);
     void loop_send(boost::system::error_code ec);
-
-    void loop_check(boost::system::error_code ec);
 
 private:
     IoContext& m_ioc;
     boost::asio::steady_timer m_timer;
     SslSocket m_socket;
-    std::unique_ptr<Resolver> m_resolver;
+    Resolver m_resolver;
+    ResolverResult m_resolve_result;
 
     string m_local_ip = "0.0.0.0";
     uint16_t m_local_port = 9108;
 
-    ConnectCallback m_conn_cb;
+    ConnectStatusNotify m_conn_notify_cb;
 
     string m_host;
-    string m_port;
-    //string m_target;
+    uint16_t m_port;
     string m_session_id;
 
-    ResolverResult m_resolve_result;
+    boost::beast::flat_buffer m_read_buffer;
     StrRequest m_req;
     StrResponse m_res;
 
     SOCKET_STATUS m_socket_status = Disconnected;
-    Coroutine m_resolve_co;
-    Coroutine m_conn_co;
-    Coroutine m_recv_co;
+    Coroutine m_co;
+
     Coroutine m_send_co;
-
-    Coroutine m_timer_co;
-
-    boost::beast::flat_buffer m_read_buffer;
-
     list<StrResponse> m_send_response_queue;
 };
 
