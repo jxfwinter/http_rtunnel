@@ -39,7 +39,15 @@ void HttpTunnelClient::async_run(string host, uint16_t port, string session_id,
     m_local_port = local_port;
     m_conn_notify_cb = std::move(cb);
 
+    m_running = true;
     loop_run({});
+}
+
+void HttpTunnelClient::cancel()
+{
+    m_running = false;
+    boost::system::error_code ec;
+    m_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
 }
 
 void HttpTunnelClient::start_http_co(string id, StrRequest& req)
@@ -66,17 +74,18 @@ void HttpTunnelClient::start_send_co(HttpCoInfoPtr co_info)
 #include <boost/asio/yield.hpp>
 void HttpTunnelClient::loop_run(boost::system::error_code ec)
 {
+    auto self(shared_from_this());
     reenter(m_co)
     {
-        while(1)
+        while(m_running)
         {
             //连接
             m_send_response_queue.clear();
-            while(1)
+            while(m_running)
             {
                 m_socket_status = Resolving;
                 KK_PRT("start resolve");
-                yield m_resolver.async_resolve(m_host, "", [this](boost::system::error_code ec, ResolverResult r) {
+                yield m_resolver.async_resolve(m_host, "", [self, this](boost::system::error_code ec, ResolverResult r) {
                     if(!ec)
                     {
                         m_resolve_result = std::move(r);
@@ -88,7 +97,7 @@ void HttpTunnelClient::loop_run(boost::system::error_code ec)
                     KK_PRT("error:%d,%s", ec.value(), ec.message().c_str());
                     m_socket_status = Disconnected;
                     m_timer.expires_after(std::chrono::seconds(2));
-                    yield m_timer.async_wait([this](boost::system::error_code ec) {
+                    yield m_timer.async_wait([self, this](boost::system::error_code ec) {
                         this->loop_run(ec);
                     });
                     continue;
@@ -98,7 +107,7 @@ void HttpTunnelClient::loop_run(boost::system::error_code ec)
                 {
                     Endpoint ep = (*m_resolve_result.begin()).endpoint();
                     ep.port(m_port);
-                    m_socket.async_connect(ep, [this](boost::system::error_code ec) {
+                    m_socket.async_connect(ep, [self, this](boost::system::error_code ec) {
                         this->loop_run(ec);
                     });
                 }
@@ -107,12 +116,13 @@ void HttpTunnelClient::loop_run(boost::system::error_code ec)
                     KK_PRT("session_id:%s, err:%s", m_session_id.c_str(), ec.message().c_str());
                     m_socket_status = Disconnected;
                     m_timer.expires_after(std::chrono::seconds(30));
-                    yield m_timer.async_wait([this](boost::system::error_code ec) {
+                    yield m_timer.async_wait([self, this](boost::system::error_code ec) {
                         this->loop_run(ec);
                     });
                     continue;
                 }
                 set_socket_opt(m_socket);
+                break;
             } //连接
 
             //建立隧道
@@ -124,7 +134,7 @@ void HttpTunnelClient::loop_run(boost::system::error_code ec)
             m_req.target("setup.tunnel");
             m_req.content_length(0);
             KK_PRT("start setup");
-            yield http::async_write(m_socket, m_req, [this](boost::system::error_code ec, size_t) {
+            yield http::async_write(m_socket, m_req, [self, this](boost::system::error_code ec, size_t) {
                 this->loop_run(ec);
             });
             if(ec)
@@ -139,7 +149,7 @@ void HttpTunnelClient::loop_run(boost::system::error_code ec)
                 continue;
             }
             //响应
-            yield http::async_read(m_socket, m_read_buffer, m_res, [this](boost::system::error_code ec, size_t) {
+            yield http::async_read(m_socket, m_read_buffer, m_res, [self, this](boost::system::error_code ec, size_t) {
                 this->loop_run(ec);
             });
             if(ec)
@@ -175,9 +185,9 @@ void HttpTunnelClient::loop_run(boost::system::error_code ec)
             }
 
             //开始接收http请求
-            while(1)
+            while(m_running)
             {
-                yield http::async_read(m_socket, m_read_buffer, m_req, [this](boost::system::error_code ec, size_t) {
+                yield http::async_read(m_socket, m_read_buffer, m_req, [self, this](boost::system::error_code ec, size_t) {
                     this->loop_run(ec);
                 });
                 if(ec)
@@ -220,9 +230,10 @@ void HttpTunnelClient::loop_run(boost::system::error_code ec)
 
 void HttpTunnelClient::loop_http(boost::system::error_code ec, HttpCoInfoPtr co_info)
 {
+    auto self(shared_from_this());
     reenter(co_info->http_co)
     {
-        yield co_info->http_socket.async_connect(Endpoint{boost::asio::ip::make_address(m_local_ip, ec), m_local_port}, [co_info, this](boost::system::error_code ec) {
+        yield co_info->http_socket.async_connect(Endpoint{boost::asio::ip::make_address(m_local_ip, ec), m_local_port}, [co_info, self, this](boost::system::error_code ec) {
             this->loop_http(ec, co_info);
         });
         if(ec)
@@ -237,7 +248,7 @@ void HttpTunnelClient::loop_http(boost::system::error_code ec, HttpCoInfoPtr co_
         co_info->req.keep_alive(false);
         co_info->req.content_length(co_info->req.body().size());
         std::cout << "send req: " << co_info->req << "\n";
-        yield http::async_write(co_info->http_socket, co_info->req, [co_info, this](boost::system::error_code ec, size_t){
+        yield http::async_write(co_info->http_socket, co_info->req, [co_info, self, this](boost::system::error_code ec, size_t){
             this->loop_http(ec, co_info);
         });
         if(ec)
@@ -248,7 +259,7 @@ void HttpTunnelClient::loop_http(boost::system::error_code ec, HttpCoInfoPtr co_
             start_send_co(co_info);
             yield break;
         }
-        yield http::async_read(co_info->http_socket, co_info->buffer, co_info->res, [co_info, this](boost::system::error_code ec, size_t){
+        yield http::async_read(co_info->http_socket, co_info->buffer, co_info->res, [co_info, self, this](boost::system::error_code ec, size_t){
             this->loop_http(ec, co_info);
         });
         if(ec)
@@ -267,6 +278,7 @@ void HttpTunnelClient::loop_http(boost::system::error_code ec, HttpCoInfoPtr co_
 
 void HttpTunnelClient::loop_send(boost::system::error_code ec)
 {
+    auto self(shared_from_this());
     reenter(m_send_co)
     {
         while(!m_send_response_queue.empty())
@@ -278,7 +290,7 @@ void HttpTunnelClient::loop_send(boost::system::error_code ec)
                 res.keep_alive(true);
                 res.content_length(res.body().size());
                 std::cout << "send res:" << res << "\n";
-                http::async_write(m_socket, res, [this](boost::system::error_code ec, std::size_t) {
+                http::async_write(m_socket, res, [self, this](boost::system::error_code ec, std::size_t) {
                     this->loop_send(ec);
                 });
             }

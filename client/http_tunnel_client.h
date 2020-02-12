@@ -52,8 +52,11 @@ enum SOCKET_STATUS {
 //连接状态回调
 typedef std::function<void (SOCKET_STATUS)> ConnectStatusNotify;
 
+class HttpTunnelClient;
+typedef std::shared_ptr<HttpTunnelClient> HttpTunnelClientPtr;
+
 //生存期与进程一致
-class HttpTunnelClient
+class HttpTunnelClient : public std::enable_shared_from_this<HttpTunnelClient>
 {
 public:
     HttpTunnelClient(IoContext& ioc);
@@ -62,6 +65,8 @@ public:
     void async_run(string host, uint16_t port, string session_id,
                    string local_ip, uint16_t local_port,
                    ConnectStatusNotify cb);
+
+    void cancel();
 
 private:
     void loop_run(boost::system::error_code ec);
@@ -82,6 +87,7 @@ private:
     string m_local_ip = "0.0.0.0";
     uint16_t m_local_port = 9108;
 
+    bool m_running = false;
     ConnectStatusNotify m_conn_notify_cb;
 
     string m_host;
