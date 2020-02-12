@@ -151,7 +151,7 @@ void HttpsTunnelClient::loop_run(boost::system::error_code ec)
                 m_socket.next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
                 if(m_socket.next_layer().is_open())
                 {
-                    m_socket.next_layer().close();
+                    m_socket.next_layer().close(ec);
                 }
                 m_socket_status = Disconnected;
                 continue;
@@ -175,7 +175,7 @@ void HttpsTunnelClient::loop_run(boost::system::error_code ec)
                 m_socket.next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
                 if(m_socket.next_layer().is_open())
                 {
-                    m_socket.next_layer().close();
+                    m_socket.next_layer().close(ec);
                 }
                 m_socket_status = Disconnected;
                 continue;
@@ -190,7 +190,7 @@ void HttpsTunnelClient::loop_run(boost::system::error_code ec)
                 m_socket.next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
                 if(m_socket.next_layer().is_open())
                 {
-                    m_socket.next_layer().close();
+                    m_socket.next_layer().close(ec);
                 }
                 m_socket_status = Disconnected;
                 continue;
@@ -202,7 +202,7 @@ void HttpsTunnelClient::loop_run(boost::system::error_code ec)
                     m_socket.next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
                     if(m_socket.next_layer().is_open())
                     {
-                        m_socket.next_layer().close();
+                        m_socket.next_layer().close(ec);
                     }
                     m_socket_status = Disconnected;
                     continue;
@@ -228,7 +228,7 @@ void HttpsTunnelClient::loop_run(boost::system::error_code ec)
                     m_socket.next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
                     if(m_socket.next_layer().is_open())
                     {
-                        m_socket.next_layer().close();
+                        m_socket.next_layer().close(ec);
                     }
                     m_socket_status = Disconnected;
                     if(m_conn_notify_cb)

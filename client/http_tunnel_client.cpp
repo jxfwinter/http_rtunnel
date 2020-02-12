@@ -143,7 +143,7 @@ void HttpTunnelClient::loop_run(boost::system::error_code ec)
                 m_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
                 if(m_socket.is_open())
                 {
-                    m_socket.close();
+                    m_socket.close(ec);
                 }
                 m_socket_status = Disconnected;
                 continue;
@@ -158,7 +158,7 @@ void HttpTunnelClient::loop_run(boost::system::error_code ec)
                 m_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
                 if(m_socket.is_open())
                 {
-                    m_socket.close();
+                    m_socket.close(ec);
                 }
                 m_socket_status = Disconnected;
                 continue;
@@ -170,7 +170,7 @@ void HttpTunnelClient::loop_run(boost::system::error_code ec)
                     m_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
                     if(m_socket.is_open())
                     {
-                        m_socket.close();
+                        m_socket.close(ec);
                     }
                     m_socket_status = Disconnected;
                     continue;
@@ -196,7 +196,7 @@ void HttpTunnelClient::loop_run(boost::system::error_code ec)
                     m_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
                     if(m_socket.is_open())
                     {
-                        m_socket.close();
+                        m_socket.close(ec);
                     }
                     m_socket_status = Disconnected;
                     if(m_conn_notify_cb)
