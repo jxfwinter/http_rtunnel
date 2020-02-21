@@ -51,6 +51,7 @@ HttpTunnelServer::HttpTunnelServer(IoContext &ioc):
     m_http_listen_ep = Endpoint{boost::asio::ip::make_address(g_cfg->http_listen_addr), g_cfg->http_listen_port};
     m_https_listen_ep = Endpoint{boost::asio::ip::make_address(g_cfg->https_listen_addr), g_cfg->https_listen_port};
 
+    SSL_CTX_set_security_level(m_ssl_cxt.native_handle(), 1); //不这样设置在新版本openssl库中会报key太短,新版本中默认安全等级为2
     m_ssl_cxt.set_options(boost::asio::ssl::context::default_workarounds);
     m_ssl_cxt.use_certificate_file(g_cfg->ssl_certificate, boost::asio::ssl::context::pem);
     m_ssl_cxt.use_private_key_file(g_cfg->ssl_certificate_key, boost::asio::ssl::context::pem);

@@ -3,6 +3,7 @@ config("myconfig") {
         "./include",
     ]
     lib_dirs = ["./lib"]
+    cflags = [ "-Wall" ]
     cflags_cc = [ "-std=c++2a" ]
 }
 
@@ -53,6 +54,19 @@ executable("https_tunnel_client") {
         "./client/pub.cpp",
         ]
     libs = ["pthread", "ssl", "crypto"]
+}
+
+executable("test_server") {
+    configs += [ ":myconfig" ]
+    configs -= [ "//build/config:c++11" ]
+
+    sources = [
+        "./client/main_test_server.cpp",
+        "./client/http_api_server.h",
+        "./client/http_api_server.cpp",
+        "./client/pub.cpp",
+        ]
+    libs = ["pthread"]
 }
 
 

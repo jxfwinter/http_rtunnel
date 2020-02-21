@@ -2,12 +2,15 @@
 .gn
 BUILD.gn
 README.md
+client/http_api_server.cpp
+client/http_api_server.h
 client/http_tunnel_client.cpp
 client/http_tunnel_client.h
 client/https_tunnel_client.cpp
 client/https_tunnel_client.h
 client/main_http.cpp
 client/main_https.cpp
+client/main_test_server.cpp
 client/pub.cpp
 client/pub.h
 client/src/CMakeLists.txt

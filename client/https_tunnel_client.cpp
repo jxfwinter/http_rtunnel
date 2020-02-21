@@ -154,6 +154,10 @@ void HttpsTunnelClient::loop_run(boost::system::error_code ec)
                     m_socket.next_layer().close(ec);
                 }
                 m_socket_status = Disconnected;
+                m_timer.expires_after(std::chrono::seconds(2));
+                yield m_timer.async_wait([self, this](boost::system::error_code ec) {
+                    this->loop_run(ec);
+                });
                 continue;
             }
 
@@ -178,6 +182,10 @@ void HttpsTunnelClient::loop_run(boost::system::error_code ec)
                     m_socket.next_layer().close(ec);
                 }
                 m_socket_status = Disconnected;
+                m_timer.expires_after(std::chrono::seconds(2));
+                yield m_timer.async_wait([self, this](boost::system::error_code ec) {
+                    this->loop_run(ec);
+                });
                 continue;
             }
             //响应
@@ -193,6 +201,10 @@ void HttpsTunnelClient::loop_run(boost::system::error_code ec)
                     m_socket.next_layer().close(ec);
                 }
                 m_socket_status = Disconnected;
+                m_timer.expires_after(std::chrono::seconds(2));
+                yield m_timer.async_wait([self, this](boost::system::error_code ec) {
+                    this->loop_run(ec);
+                });
                 continue;
             }
             {
@@ -205,6 +217,10 @@ void HttpsTunnelClient::loop_run(boost::system::error_code ec)
                         m_socket.next_layer().close(ec);
                     }
                     m_socket_status = Disconnected;
+                    m_timer.expires_after(std::chrono::seconds(2));
+                    yield m_timer.async_wait([self, this](boost::system::error_code ec) {
+                        this->loop_run(ec);
+                    });
                     continue;
                 }
             }
@@ -237,7 +253,7 @@ void HttpsTunnelClient::loop_run(boost::system::error_code ec)
                     }
                     break;
                 }
-                std::cout << "recv req:" << m_req << "\n";
+                std::cout << "recv req:\n" << m_req << "\n";
                 //检查请求是否合法
                 {
                     auto it = m_req.find(TID);
@@ -279,7 +295,7 @@ void HttpsTunnelClient::loop_http(boost::system::error_code ec, HttpCoInfoPtr co
         //使用短连接
         co_info->req.keep_alive(false);
         co_info->req.content_length(co_info->req.body().size());
-        std::cout << "send req: " << co_info->req << "\n";
+        std::cout << "send req:\n" << co_info->req << "\n";
         yield http::async_write(co_info->http_socket, co_info->req, [co_info, self, this](boost::system::error_code ec, size_t){
             this->loop_http(ec, co_info);
         });
@@ -303,7 +319,7 @@ void HttpsTunnelClient::loop_http(boost::system::error_code ec, HttpCoInfoPtr co
             yield break;
         }
         co_info->res.set(TID, co_info->id);
-        std::cout << "recv res: " << co_info->res << "\n";
+        std::cout << "recv res:\n" << co_info->res << "\n";
         start_send_co(co_info);
     }
 }
@@ -321,7 +337,7 @@ void HttpsTunnelClient::loop_send(boost::system::error_code ec)
                 //转换成长连接
                 res.keep_alive(true);
                 res.content_length(res.body().size());
-                std::cout << "send res:" << res << "\n";
+                std::cout << "send res:\n" << res << "\n";
                 http::async_write(m_socket, res, [self, this](boost::system::error_code ec, std::size_t) {
                     this->loop_send(ec);
                 });
