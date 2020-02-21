@@ -17,17 +17,24 @@
     }while(0)
 
 HttpsTunnelClient::HttpsTunnelClient(IoContext& ioc, SslContext &ssl_cxt, bool verify) :
-    m_ioc(ioc), m_timer(m_ioc), m_socket(m_ioc, ssl_cxt), m_resolver(m_ioc)
+    m_ioc(ioc), m_ssl_cxt(ssl_cxt), m_timer(m_ioc),
+    m_verify(verify), m_resolver(m_ioc)
 {
-    if(!verify)
+
+}
+
+void HttpsTunnelClient::create_ssl()
+{
+    m_socket.reset(new SslSocket(m_ioc, m_ssl_cxt));
+    if(!m_verify)
     {
         //不验证证书合法性,所以cxt不用调用load_verify_file add_verify_path或add_certificate_authority
-        m_socket.set_verify_mode(boost::asio::ssl::verify_none);
+        m_socket->set_verify_mode(boost::asio::ssl::verify_none);
     }
     else
     {
-        m_socket.set_verify_mode(boost::asio::ssl::verify_peer);
-        m_socket.set_verify_callback([](bool preverified, boost::asio::ssl::verify_context& ctx) {
+        m_socket->set_verify_mode(boost::asio::ssl::verify_peer);
+        m_socket->set_verify_callback([](bool preverified, boost::asio::ssl::verify_context& ctx) {
             KK_PRT("preverified:%d", (int)preverified);
             char subject_name[256];
             X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
@@ -63,7 +70,7 @@ void HttpsTunnelClient::cancel()
 {
     m_running = false;
     boost::system::error_code ec;
-    m_socket.next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+    m_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
 }
 
 void HttpsTunnelClient::start_http_co(string id, StrRequest& req)
@@ -121,9 +128,10 @@ void HttpsTunnelClient::loop_run(boost::system::error_code ec)
                 m_socket_status = Connecting;
                 yield
                 {
+                    create_ssl();
                     Endpoint ep = (*m_resolve_result.begin()).endpoint();
                     ep.port(m_port);
-                    m_socket.next_layer().async_connect(ep, [self, this](boost::system::error_code ec) {
+                    m_socket->next_layer().async_connect(ep, [self, this](boost::system::error_code ec) {
                         this->loop_run(ec);
                     });
                 }
@@ -137,22 +145,17 @@ void HttpsTunnelClient::loop_run(boost::system::error_code ec)
                     });
                     continue;
                 }
-                set_socket_opt(m_socket.next_layer());
+                set_socket_opt(m_socket->next_layer());
                 break;
             } //连接
 
             //ssl初始化
-            yield m_socket.async_handshake(boost::asio::ssl::stream_base::client, [self, this](boost::system::error_code ec) {
+            yield m_socket->async_handshake(boost::asio::ssl::stream_base::client, [self, this](boost::system::error_code ec) {
                 this->loop_run(ec);
             });
             if(ec)
             {
                 KK_PRT("error:%d,%s", ec.value(), ec.message().c_str());
-                m_socket.next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
-                if(m_socket.next_layer().is_open())
-                {
-                    m_socket.next_layer().close(ec);
-                }
                 m_socket_status = Disconnected;
                 m_timer.expires_after(std::chrono::seconds(2));
                 yield m_timer.async_wait([self, this](boost::system::error_code ec) {
@@ -170,17 +173,12 @@ void HttpsTunnelClient::loop_run(boost::system::error_code ec)
             m_req.target("setup.tunnel");
             m_req.content_length(0);
             KK_PRT("start setup");
-            yield http::async_write(m_socket, m_req, [self, this](boost::system::error_code ec, size_t) {
+            yield http::async_write(*m_socket, m_req, [self, this](boost::system::error_code ec, size_t) {
                 this->loop_run(ec);
             });
             if(ec)
             {
                 KK_PRT("error:%d,%s", ec.value(), ec.message().c_str());
-                m_socket.next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
-                if(m_socket.next_layer().is_open())
-                {
-                    m_socket.next_layer().close(ec);
-                }
                 m_socket_status = Disconnected;
                 m_timer.expires_after(std::chrono::seconds(2));
                 yield m_timer.async_wait([self, this](boost::system::error_code ec) {
@@ -189,17 +187,12 @@ void HttpsTunnelClient::loop_run(boost::system::error_code ec)
                 continue;
             }
             //响应
-            yield http::async_read(m_socket, m_read_buffer, m_res, [self, this](boost::system::error_code ec, size_t) {
+            yield http::async_read(*m_socket, m_read_buffer, m_res, [self, this](boost::system::error_code ec, size_t) {
                 this->loop_run(ec);
             });
             if(ec)
             {
                 KK_PRT("error:%d,%s", ec.value(), ec.message().c_str());
-                m_socket.next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
-                if(m_socket.next_layer().is_open())
-                {
-                    m_socket.next_layer().close(ec);
-                }
                 m_socket_status = Disconnected;
                 m_timer.expires_after(std::chrono::seconds(2));
                 yield m_timer.async_wait([self, this](boost::system::error_code ec) {
@@ -211,11 +204,6 @@ void HttpsTunnelClient::loop_run(boost::system::error_code ec)
                 if((int)m_res.result() >= 300 || (int)m_res.result() < 200)
                 {
                     KK_PRT("setup error:%d", (int)m_res.result());
-                    m_socket.next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
-                    if(m_socket.next_layer().is_open())
-                    {
-                        m_socket.next_layer().close(ec);
-                    }
                     m_socket_status = Disconnected;
                     m_timer.expires_after(std::chrono::seconds(2));
                     yield m_timer.async_wait([self, this](boost::system::error_code ec) {
@@ -235,17 +223,12 @@ void HttpsTunnelClient::loop_run(boost::system::error_code ec)
             //开始接收http请求
             while(m_running)
             {
-                yield http::async_read(m_socket, m_read_buffer, m_req, [self, this](boost::system::error_code ec, size_t) {
+                yield http::async_read(*m_socket, m_read_buffer, m_req, [self, this](boost::system::error_code ec, size_t) {
                     this->loop_run(ec);
                 });
                 if(ec)
                 {
                     KK_PRT("error:%d,%s", ec.value(), ec.message().c_str());
-                    m_socket.next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
-                    if(m_socket.next_layer().is_open())
-                    {
-                        m_socket.next_layer().close(ec);
-                    }
                     m_socket_status = Disconnected;
                     if(m_conn_notify_cb)
                     {
@@ -338,7 +321,7 @@ void HttpsTunnelClient::loop_send(boost::system::error_code ec)
                 res.keep_alive(true);
                 res.content_length(res.body().size());
                 std::cout << "send res:\n" << res << "\n";
-                http::async_write(m_socket, res, [self, this](boost::system::error_code ec, std::size_t) {
+                http::async_write(*m_socket, res, [self, this](boost::system::error_code ec, std::size_t) {
                     this->loop_send(ec);
                 });
             }
@@ -347,7 +330,7 @@ void HttpsTunnelClient::loop_send(boost::system::error_code ec)
             if(ec)
             {
                 KK_PRT("error:%d,%s", ec.value(), ec.message().c_str());
-                m_socket.next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+                m_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
                 yield break;
             }
         }

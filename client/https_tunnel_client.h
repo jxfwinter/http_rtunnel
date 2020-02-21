@@ -78,10 +78,14 @@ private:
     void loop_http(boost::system::error_code ec, HttpCoInfoPtr co_info);
     void loop_send(boost::system::error_code ec);
 
+    void create_ssl();
+
 private:
     IoContext& m_ioc;
+    SslContext& m_ssl_cxt;
     boost::asio::steady_timer m_timer;
-    SslSocket m_socket;
+    std::unique_ptr<SslSocket> m_socket;
+    bool m_verify = false;
     Resolver m_resolver;
     ResolverResult m_resolve_result;
 

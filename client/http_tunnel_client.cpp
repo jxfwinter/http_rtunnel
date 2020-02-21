@@ -105,6 +105,7 @@ void HttpTunnelClient::loop_run(boost::system::error_code ec)
                 m_socket_status = Connecting;
                 yield
                 {
+                    m_socket = TcpSocket(m_ioc);
                     Endpoint ep = (*m_resolve_result.begin()).endpoint();
                     ep.port(m_port);
                     m_socket.async_connect(ep, [self, this](boost::system::error_code ec) {
@@ -140,11 +141,6 @@ void HttpTunnelClient::loop_run(boost::system::error_code ec)
             if(ec)
             {
                 KK_PRT("error:%d,%s", ec.value(), ec.message().c_str());
-                m_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
-                if(m_socket.is_open())
-                {
-                    m_socket.close(ec);
-                }
                 m_socket_status = Disconnected;
                 m_timer.expires_after(std::chrono::seconds(2));
                 yield m_timer.async_wait([self, this](boost::system::error_code ec) {
@@ -159,11 +155,6 @@ void HttpTunnelClient::loop_run(boost::system::error_code ec)
             if(ec)
             {
                 KK_PRT("error:%d,%s", ec.value(), ec.message().c_str());
-                m_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
-                if(m_socket.is_open())
-                {
-                    m_socket.close(ec);
-                }
                 m_socket_status = Disconnected;
                 m_timer.expires_after(std::chrono::seconds(2));
                 yield m_timer.async_wait([self, this](boost::system::error_code ec) {
@@ -175,11 +166,6 @@ void HttpTunnelClient::loop_run(boost::system::error_code ec)
                 if((int)m_res.result() >= 300 || (int)m_res.result() < 200)
                 {
                     KK_PRT("setup error:%d", (int)m_res.result());
-                    m_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
-                    if(m_socket.is_open())
-                    {
-                        m_socket.close(ec);
-                    }
                     m_socket_status = Disconnected;
                     m_timer.expires_after(std::chrono::seconds(2));
                     yield m_timer.async_wait([self, this](boost::system::error_code ec) {
@@ -205,11 +191,6 @@ void HttpTunnelClient::loop_run(boost::system::error_code ec)
                 if(ec)
                 {
                     KK_PRT("error:%d,%s", ec.value(), ec.message().c_str());
-                    m_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
-                    if(m_socket.is_open())
-                    {
-                        m_socket.close(ec);
-                    }
                     m_socket_status = Disconnected;
                     if(m_conn_notify_cb)
                     {
