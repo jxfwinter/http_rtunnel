@@ -82,19 +82,6 @@ void HttpTunnelSession::loop_send(BSErrorCode ec)
             yield m_wait_send_timer.async_wait([self, this](BSErrorCode ec) {
                     this->loop_send(ec);
             });
-            if(!ec && m_socket.is_open())
-            {
-                continue;
-            }
-            if(ec != boost::asio::error::operation_aborted)
-            {
-                log_debug("session:%1%,ep:%2% err:%3%", m_session_id, m_remote_ep, ec.message());
-                return;
-            }
-            else if(ec == boost::asio::error::operation_aborted) //表示有消息需要发送
-            {
-                log_debug("session:%1%,ep:%2% wait send timer aborted", m_session_id, m_remote_ep);
-            }
 
             if(!m_socket.is_open())
             {
