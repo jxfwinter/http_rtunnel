@@ -237,6 +237,7 @@ void HttpTunnelServer::loop_init_session(BSErrorCode ec, InitSessionInfoPtr co_i
                 }
 
                 co_info->res.result(http::status::ok);
+                co_info->res.reason("Connection established");
                 co_info->res.version(11);
                 co_info->res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
                 co_info->res.content_length(0);
@@ -320,6 +321,7 @@ void HttpTunnelServer::loop_init_session(BSErrorCode ec, InitSessionInfoPtr co_i
                 }
 
                 co_info->res.result(http::status::ok);
+                co_info->res.reason("Connection established");
                 co_info->res.version(11);
                 co_info->res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
                 co_info->res.content_length(0);

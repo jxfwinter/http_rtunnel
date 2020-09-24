@@ -53,6 +53,7 @@ void TunnelSession::callback_by_timeout(const string& tid)
         cxt.res.version(cxt.req.version());
         cxt.res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
         cxt.res.keep_alive(cxt.req.keep_alive());
+        cxt.res.content_length(0);
         cxt.cb(std::move(cxt.res));
     }
     else
@@ -85,6 +86,7 @@ void TunnelSession::callback_by_error(const string& tid, BSErrorCode ec)
         cxt.res.version(cxt.req.version());
         cxt.res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
         cxt.res.keep_alive(cxt.req.keep_alive());
+        cxt.res.content_length(0);
         cxt.cb(std::move(cxt.res));
     }
     else
