@@ -97,7 +97,7 @@ void HttpsTunnelSession::loop_send(BSErrorCode ec)
                     break;
                 }
                 m_cur_send_tid = msg_cxt->tid;
-                log_debug("tunnel send req:\n%1%", msg_cxt->req);
+                log_debug("ep:%1% tunnel send req:\n%2%", m_remote_ep, msg_cxt->req);
                 yield http::async_write(m_socket, msg_cxt->req, [self, this](BSErrorCode ec, size_t) {
                     this->loop_send(ec);
                 });
@@ -132,7 +132,7 @@ void HttpsTunnelSession::loop_recv(BSErrorCode ec)
                 m_cb(ec);
                 return;
             }
-            log_debug("session:%1%,ep:%2% tunnel recv res:\n%3%", m_session_id, m_remote_ep, m_recv_res);
+            log_debug("ep:%1% tunnel recv res:\n%2%", m_remote_ep, m_recv_res);
             it = m_recv_res.find(TID);
             if(it == m_recv_res.end())
             {
