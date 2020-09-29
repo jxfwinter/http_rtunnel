@@ -203,6 +203,7 @@ void HttpTunnelServer::loop_init_session(BSErrorCode ec, InitSessionInfoPtr co_i
         //非https连接
         if(!co_info->https)
         {
+            co_info->req = {};
             yield http::async_read(co_info->socket, co_info->buffer, co_info->req, [co_info, this](const BSErrorCode& ec, std::size_t) {
                 this->loop_init_session(ec, co_info);
             });
@@ -287,6 +288,7 @@ void HttpTunnelServer::loop_init_session(BSErrorCode ec, InitSessionInfoPtr co_i
                 return;
             }
 
+            co_info->req = {};
             yield http::async_read(*(co_info->ssl_socket), co_info->buffer, co_info->req, [co_info, this](const BSErrorCode& ec, std::size_t) {
                 this->loop_init_session(ec, co_info);
             });
@@ -476,12 +478,14 @@ void HttpTunnelServer::loop_http_session(BSErrorCode ec, HttpSessionInfoPtr co_i
             //读取一个请求
             if(co_info->https)
             {
+                co_info->req = {};
                 yield http::async_read(*(co_info->ssl_socket), co_info->buffer, co_info->req, [co_info, this](const BSErrorCode& ec, std::size_t) {
                     this->loop_http_session(ec, co_info);
                 });
             }
             else
             {
+                co_info->req = {};
                 yield http::async_read(co_info->socket, co_info->buffer, co_info->req, [co_info, this](const BSErrorCode& ec, std::size_t) {
                     this->loop_http_session(ec, co_info);
                 });
@@ -500,9 +504,16 @@ void HttpTunnelServer::loop_http_session(BSErrorCode ec, HttpSessionInfoPtr co_i
 
 void HttpTunnelServer::set_response(const StringRequest& req, http::status s, StringResponse& res)
 {
+    res = {};
     res.result(s);
     res.version(req.version());
     res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+    auto id_it = req.find(SESSION_ID);
+    if(id_it != req.end())
+    {
+        res.set(SESSION_ID, (*id_it).value().to_string());
+    }
+
     res.keep_alive(req.keep_alive());
     res.content_length(0);
 }

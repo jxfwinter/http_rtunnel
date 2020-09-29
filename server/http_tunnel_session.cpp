@@ -34,9 +34,10 @@ void HttpTunnelSession::async_request(StringRequest req, int timeout, RequestCal
     auto self(shared_from_this());
     string tid;
     {
+        int64_t tofd = boost::posix_time::microsec_clock::local_time().time_of_day().total_milliseconds();
         char tmp[32];
         std::lock_guard<std::mutex> lk(m_mutex);
-        sprintf(tmp, "%d", m_tid);
+        sprintf(tmp, "lld-%d", tofd, m_tid);
         ++m_tid;
         tid = tmp;
     }
