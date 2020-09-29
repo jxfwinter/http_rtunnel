@@ -37,7 +37,7 @@ void HttpsTunnelSession::async_request(StringRequest req, int timeout, RequestCa
         int64_t tofd = boost::posix_time::microsec_clock::local_time().time_of_day().total_milliseconds();
         char tmp[32];
         std::lock_guard<std::mutex> lk(m_mutex);
-        sprintf(tmp, "lld-%d", tofd, m_tid);
+        sprintf(tmp, "%ld-%u", tofd, m_tid);
         ++m_tid;
         tid = tmp;
     }

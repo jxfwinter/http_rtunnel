@@ -37,7 +37,7 @@ void HttpTunnelSession::async_request(StringRequest req, int timeout, RequestCal
         int64_t tofd = boost::posix_time::microsec_clock::local_time().time_of_day().total_milliseconds();
         char tmp[32];
         std::lock_guard<std::mutex> lk(m_mutex);
-        sprintf(tmp, "lld-%d", tofd, m_tid);
+        sprintf(tmp, "%ld-%u", tofd, m_tid);
         ++m_tid;
         tid = tmp;
     }
@@ -47,6 +47,13 @@ void HttpTunnelSession::async_request(StringRequest req, int timeout, RequestCal
     tmsg_cxt->req = std::move(req);
     tmsg_cxt->cb = std::move(cb);
     tmsg_cxt->tid = tid;
+
+#if 1
+    if(boost::lexical_cast<int>(tmsg_cxt->req[http::field::content_length].to_string()) != tmsg_cxt->req.body().size())
+    {
+        log_error_ext("body size != content_length");
+    }
+#endif
 
     tmsg_cxt->timer.expires_from_now(boost::posix_time::seconds(timeout));
     tmsg_cxt->timer.async_wait([tid, self, this](BSErrorCode ec){
