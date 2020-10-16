@@ -51,7 +51,9 @@ HttpTunnelServer::HttpTunnelServer(IoContext &ioc):
     m_http_listen_ep = Endpoint{boost::asio::ip::make_address(g_cfg->http_listen_addr), g_cfg->http_listen_port};
     m_https_listen_ep = Endpoint{boost::asio::ip::make_address(g_cfg->https_listen_addr), g_cfg->https_listen_port};
 
+#if OPENSSL_VERSION_NUMBER > 0x10100000L
     SSL_CTX_set_security_level(m_ssl_cxt.native_handle(), 1); //不这样设置在新版本openssl库中会报key太短,新版本中默认安全等级为2
+#endif
     m_ssl_cxt.set_options(boost::asio::ssl::context::default_workarounds);
     m_ssl_cxt.use_certificate_file(g_cfg->ssl_certificate, boost::asio::ssl::context::pem);
     m_ssl_cxt.use_private_key_file(g_cfg->ssl_certificate_key, boost::asio::ssl::context::pem);
@@ -131,6 +133,8 @@ void HttpTunnelServer::start_init_session(TcpSocket s, bool https)
     InitSessionInfoPtr co_info(new InitSessionInfo(s));
     co_info->https = https;
     set_socket_opt(co_info->socket);
+    BSErrorCode ec;
+    co_info->remote_ep = s.remote_endpoint(ec);
     loop_init_session({}, std::move(co_info));
 }
 
@@ -142,6 +146,7 @@ void HttpTunnelServer::start_http_session(InitSessionInfoPtr init_info)
     {
         co_info->ssl_socket = init_info->ssl_socket;
     }
+    co_info->remote_ep = init_info->remote_ep;
     co_info->timeout = g_cfg->req_timeout_secs;
     co_info->req = std::move(init_info->req);
     loop_http_session({}, co_info);
@@ -212,7 +217,7 @@ void HttpTunnelServer::loop_init_session(BSErrorCode ec, InitSessionInfoPtr co_i
                 log_warning_ext("loop_init_session failed, %1%", ec.message());
                 return;
             }
-            LogDebug << co_info->req;
+            LogDebug << co_info->req << "\nep:" << co_info->remote_ep;
             if(co_info->req.method() == http::verb::connect)
             {
                 //为建立隧道请求
@@ -492,7 +497,7 @@ void HttpTunnelServer::loop_http_session(BSErrorCode ec, HttpSessionInfoPtr co_i
             }
             if(ec)
             {
-                log_warning_ext("loop_http_session failed, %1%", ec.message());
+                log_warning_ext("loop_http_session failed, %1%,ep:%2%", ec.message(), co_info->remote_ep);
                 return;
             }
             LogDebug << co_info->req;

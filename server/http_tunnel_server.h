@@ -14,6 +14,7 @@ struct InitSessionInfo
     string session_id;
     Coroutine co;
     TcpSocket socket;
+    Endpoint remote_ep;
     std::shared_ptr<SslSocket> ssl_socket;
     boost::beast::flat_buffer buffer;
     StringRequest req;
@@ -28,6 +29,7 @@ struct HttpSessionInfo
     bool https = false;
     Coroutine co;
     TcpSocket socket;
+    Endpoint remote_ep;
     std::shared_ptr<SslSocket> ssl_socket;
     boost::beast::flat_buffer buffer;
     StringRequest req;
