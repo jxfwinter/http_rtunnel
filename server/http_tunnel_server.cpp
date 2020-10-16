@@ -134,7 +134,7 @@ void HttpTunnelServer::start_init_session(TcpSocket s, bool https)
     co_info->https = https;
     set_socket_opt(co_info->socket);
     BSErrorCode ec;
-    co_info->remote_ep = s.remote_endpoint(ec);
+    co_info->remote_ep = co_info->socket.remote_endpoint(ec);
     loop_init_session({}, std::move(co_info));
 }
 
