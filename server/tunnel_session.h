@@ -62,7 +62,7 @@ protected:
     Coroutine m_recv_co;
 
     //DTimer m_wait_send_timer;
-    string m_cur_send_tid;
+    TMsgContextPtr m_cur_send_msg_cxt;
 
     boost::beast::flat_buffer m_recv_buffer;
     StringResponse m_recv_res;

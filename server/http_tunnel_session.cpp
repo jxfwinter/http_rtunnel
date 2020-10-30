@@ -80,7 +80,6 @@ void HttpTunnelSession::async_request(StringRequest req, int timeout, RequestCal
 void HttpTunnelSession::loop_send(BSErrorCode ec)
 {
     auto self(shared_from_this());
-    TMsgContextPtr msg_cxt;
     reenter(m_send_co)
     {
         for(;;)
@@ -99,19 +98,18 @@ void HttpTunnelSession::loop_send(BSErrorCode ec)
 
             for(;;)
             {
-                msg_cxt = get_non_send_tmsg();
-                if(!msg_cxt)
+                m_cur_send_msg_cxt = get_non_send_tmsg();
+                if(!m_cur_send_msg_cxt)
                 {
                     break;
                 }
-                m_cur_send_tid = msg_cxt->tid;
-                log_debug("ep:%1% tunnel send req:\n%2%", m_remote_ep, msg_cxt->req);
-                yield http::async_write(m_socket, msg_cxt->req, [self, this](BSErrorCode ec, size_t) {
+                log_debug("ep:%1% tunnel send req:\n%2%", m_remote_ep, m_cur_send_msg_cxt->req);
+                yield http::async_write(m_socket, m_cur_send_msg_cxt->req, [self, this](BSErrorCode ec, size_t) {
                     this->loop_send(ec);
                 });
                 if(ec)
                 {
-                    callback_by_error(m_cur_send_tid, ec);
+                    callback_by_error(m_cur_send_msg_cxt->tid, ec);
                     return;
                 }
             }
