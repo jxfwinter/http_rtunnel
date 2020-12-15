@@ -1,6 +1,6 @@
 .gitignore
-.gn
-BUILD.gn
+CMakeLists.txt
+README.md
 README.md
 client/http_api_server.cpp
 client/http_api_server.h

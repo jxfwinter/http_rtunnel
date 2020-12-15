@@ -27,5 +27,5 @@ http反向隧道中间件，类似ssh反向隧道，但ssh反向隧道，一个�
 6 隧道可选ssl加密  
 
 构建命令  
-gn gen out/release --args="is_debug=false"  
-ninja -C out/release  
+cmake -S . -B build  
+cmake --build build -j 1 -v  
