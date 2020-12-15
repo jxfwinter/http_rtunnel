@@ -32,6 +32,10 @@ target_link_libraries(http_tunnel_server PRIVATE
     ssl pthread crypto
     -Wl,--end-group)
 target_compile_features(http_tunnel_server PRIVATE cxx_std_20)
+#target_compile_definitions(http_tunnel_server PRIVATE BOOST_ASIO_NO_TS_EXECUTORS)
+
+#1.75版本需要定义BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT
+target_compile_definitions(http_tunnel_server PRIVATE BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT=1)
 set_target_properties(http_tunnel_server PROPERTIES CXX_EXTENSIONS OFF)
 set_target_properties(http_tunnel_server PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin")
 

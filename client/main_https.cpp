@@ -47,7 +47,9 @@ int main(int argc,char ** argv)
     }
 
     SslContext ssl_cxt(boost::asio::ssl::context::sslv23);
-    SSL_CTX_set_security_level(ssl_cxt.native_handle(), 1); //不这样设置在新版本openssl库中会报key太短,新版本中默认安全等级为2
+#if OPENSSL_VERSION_NUMBER > 0x10100000L
+    SSL_CTX_set_security_level(m_ssl_cxt.native_handle(), 1); //不这样设置在新版本openssl库中会报key太短,新版本中默认安全等级为2
+#endif
     if(!verify_file.empty())
     {
         ssl_cxt.load_verify_file(verify_file);
