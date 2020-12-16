@@ -16,7 +16,7 @@ struct TMsgContext
     DTimer timer;
     bool sended = false;
 
-    TMsgContext(boost::asio::executor ex);
+    TMsgContext(boost::asio::any_io_executor  ex);
 };
 
 typedef std::shared_ptr<TMsgContext> TMsgContextPtr;

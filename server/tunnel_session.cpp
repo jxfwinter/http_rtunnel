@@ -1,6 +1,6 @@
 #include "tunnel_session.h"
 
-TMsgContext::TMsgContext(boost::asio::executor ex) : timer(ex)
+TMsgContext::TMsgContext(asio::any_io_executor ex) : timer(ex)
 {
 
 }

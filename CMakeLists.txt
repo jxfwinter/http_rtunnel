@@ -34,8 +34,10 @@ target_link_libraries(http_tunnel_server PRIVATE
 target_compile_features(http_tunnel_server PRIVATE cxx_std_20)
 #target_compile_definitions(http_tunnel_server PRIVATE BOOST_ASIO_NO_TS_EXECUTORS)
 
-#1.75版本需要定义BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT
-target_compile_definitions(http_tunnel_server PRIVATE BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT=1)
+#1.75版本,如果旧代码直接使用boost::asio::executor需要定义BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT
+# 不定义宏,需要将boost::asio::executor替换为boost::asio::any_io_executor
+# https://www.boost.org/doc/libs/1_75_0/doc/html/boost_asio/std_executors.html
+# target_compile_definitions(http_tunnel_server PRIVATE BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT=1)
 set_target_properties(http_tunnel_server PROPERTIES CXX_EXTENSIONS OFF)
 set_target_properties(http_tunnel_server PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin")
 
